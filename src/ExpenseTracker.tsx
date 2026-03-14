@@ -10,8 +10,8 @@ import {
   Legend,
   Cell,
   CartesianGrid,
-  Area,
-  AreaChart,
+  Line,
+  LineChart,
 } from "recharts";
 import { format, isSameMonth, isSameYear, parseISO, subDays, addDays, differenceInDays } from "date-fns";
 import { supabase } from "./lib/supabase";
@@ -113,8 +113,9 @@ export function ExpenseTracker() {
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [range, setRange] = useState<RangeFilter>("month");
-  const [lineRange, setLineRange] = useState<number | "all">(28);
+  const [lineRange, setLineRange] = useState<number | "all">(7);
   const [lineType, setLineType] = useState<"daily" | "cumulative">("daily");
+  const [lineView, setLineView] = useState<"all" | "category">("all");
   const [loading, setLoading] = useState(true);
   const [currencyCode, setCurrencyCode] = useState<CurrencyCode>(() => {
     const savedCode = localStorage.getItem("app_currency_code")?.toUpperCase();
@@ -381,14 +382,14 @@ export function ExpenseTracker() {
   }, [convertedFiltered]);
 
   /* Line data */
-  const lineData = useMemo(() => {
+  const { lineData, categoryLineData, categorySeries } = useMemo(() => {
     const now = new Date();
-    const map = new Map<string, number>();
+    const map = new Map<string, { total: number; categories: Record<string, number> }>();
 
     // Backfill empty days if range is bounded
     if (lineRange !== "all") {
       for (let i = lineRange - 1; i >= 0; i--) {
-        map.set(format(subDays(now, i), "yyyy-MM-dd"), 0);
+        map.set(format(subDays(now, i), "yyyy-MM-dd"), { total: 0, categories: {} });
       }
     }
 
@@ -400,28 +401,83 @@ export function ExpenseTracker() {
       const d = parseISO(e.created_at);
       const k = format(d, "yyyy-MM-dd");
       const convertedAmount = convertFromBase(e.amount);
+
       if (lineRange !== "all") {
-         if (d >= start && map.has(k)) {
-          map.set(k, map.get(k)! + convertedAmount);
-         }
+        if (d >= start && map.has(k)) {
+          const current = map.get(k)!;
+          current.total += convertedAmount;
+          current.categories[e.category] = (current.categories[e.category] ?? 0) + convertedAmount;
+          map.set(k, current);
+        }
       } else {
-        map.set(k, (map.get(k) ?? 0) + convertedAmount);
+        const current = map.get(k) ?? { total: 0, categories: {} };
+        current.total += convertedAmount;
+        current.categories[e.category] = (current.categories[e.category] ?? 0) + convertedAmount;
+        map.set(k, current);
       }
     });
 
     const sorted = Array.from(map.entries())
       .sort(([a], [b]) => (a < b ? -1 : 1))
-      .map(([date, total]) => ({ date, total }));
+      .map(([date, values]) => ({ date, total: values.total, categories: values.categories }));
+
+    const categoryNames = Array.from(
+      new Set(sorted.flatMap((entry) => Object.keys(entry.categories))),
+    );
+
+    const categorySeriesMeta = categoryNames.map((name, index) => ({
+      key: `cat_${index}`,
+      name,
+      color: PIE_COLORS[index % PIE_COLORS.length],
+    }));
+
+    const createCategoryRow = (entry: { date: string; total: number; categories: Record<string, number> }) => {
+      const row: Record<string, number | string> = {
+        date: entry.date,
+        total: entry.total,
+      };
+
+      categorySeriesMeta.forEach((series) => {
+        row[series.key] = entry.categories[series.name] ?? 0;
+      });
+
+      return row;
+    };
 
     if (lineType === "cumulative") {
       let acc = 0;
-      return sorted.map(d => {
-         acc += d.total;
-         return { ...d, total: acc };
+      const accByCategory: Record<string, number> = {};
+      categorySeriesMeta.forEach((series) => {
+        accByCategory[series.key] = 0;
       });
+
+      const cumulativeRows: Record<string, number | string>[] = sorted.map((entry) => {
+        acc += entry.total;
+        const baseRow = createCategoryRow(entry);
+
+        categorySeriesMeta.forEach((series) => {
+          accByCategory[series.key] += Number(baseRow[series.key] ?? 0);
+          baseRow[series.key] = accByCategory[series.key];
+        });
+
+        return {
+          ...baseRow,
+          total: acc,
+        };
+      });
+
+      return {
+        lineData: cumulativeRows.map((row) => ({ date: String(row["date"]), total: Number(row["total"]) })),
+        categoryLineData: cumulativeRows,
+        categorySeries: categorySeriesMeta,
+      };
     }
-    
-    return sorted;
+
+    return {
+      lineData: sorted.map((entry) => ({ date: entry.date, total: entry.total })),
+      categoryLineData: sorted.map((entry) => createCategoryRow(entry)),
+      categorySeries: categorySeriesMeta,
+    };
   }, [expenses, lineRange, lineType, convertFromBase]);
 
   const lineRanges: { key: number | "all"; label: string }[] = [
@@ -689,22 +745,38 @@ export function ExpenseTracker() {
 
         {/* Area / Line */}
         <div className="card" style={{ display: "flex", flexDirection: "column" }}>
-          <div className="card-head">
+          <div className="card-head time-card-head">
             <div>
               <div className="card-title">Spending over time</div>
-              <div className="card-sub">Totals for selected range</div>
-            </div>
-            <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "100%" }}>
-              <div className="filter-pills">
-                <button className={lineType === "daily" ? "pill active" : "pill"} onClick={() => setLineType("daily")}>Daily</button>
-                <button className={lineType === "cumulative" ? "pill active" : "pill"} onClick={() => setLineType("cumulative")}>Cumulative</button>
+              <div className="card-sub">
+                {lineView === "all" ? "Totals for selected range" : "Category trends for selected range"}
               </div>
-              <div className="filter-pills" style={{ overflowX: "auto", maxWidth: "100%", whiteSpace: "nowrap" }}>
-                {lineRanges.map((r) => (
-                  <button key={r.key} className={lineRange === r.key ? "pill active" : "pill"} onClick={() => setLineRange(r.key)}>
-                    {r.label}
-                  </button>
-                ))}
+            </div>
+            <div className="time-controls">
+              <div className="time-first-row">
+                <div className="time-pills-row">
+                  <div className="filter-pills">
+                    <button className={lineView === "all" ? "pill active" : "pill"} onClick={() => setLineView("all")}>All</button>
+                    <button className={lineView === "category" ? "pill active" : "pill"} onClick={() => setLineView("category")}>Category</button>
+                  </div>
+                </div>
+
+                <div className="time-pills-row">
+                  <div className="filter-pills">
+                    <button className={lineType === "daily" ? "pill active" : "pill"} onClick={() => setLineType("daily")}>Daily</button>
+                    <button className={lineType === "cumulative" ? "pill active" : "pill"} onClick={() => setLineType("cumulative")}>Cumulative</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="time-pills-row">
+                <div className="filter-pills">
+                  {lineRanges.map((r) => (
+                    <button key={r.key} className={lineRange === r.key ? "pill active" : "pill"} onClick={() => setLineRange(r.key)}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -713,23 +785,41 @@ export function ExpenseTracker() {
               ? empty("Add expenses to see trends")
               : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={lineData}>
-                    <defs>
-                      <linearGradient id="aGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
+                  <LineChart data={lineView === "all" ? lineData : categoryLineData}>
                     <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
                     <XAxis dataKey="date" tick={{ fill: "var(--text-muted)", fontSize: 12 }} axisLine={{ stroke: "var(--border)" }} tickLine={false} />
                     <YAxis tick={{ fill: "var(--text-muted)", fontSize: 12 }} axisLine={{ stroke: "var(--border)" }} tickLine={false} tickFormatter={(value: number) => `${currencySymbol}${Math.round(value)}`} />
                     <Tooltip
                       contentStyle={{ background: "var(--bg-raised)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
-                      formatter={(value: any) => [`${currencySymbol}${Number(value).toFixed(2)}`, "Total"]}
+                      formatter={(value: any, name: any) => [`${currencySymbol}${Number(value).toFixed(2)}`, String(name)]}
                     />
                     <Legend />
-                    <Area type="monotone" dataKey="total" stroke="#3B82F6" strokeWidth={2} fill="url(#aGrad)" dot={{ r: 3, fill: "#3B82F6", stroke: "var(--bg-surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: "#60A5FA" }} />
-                  </AreaChart>
+
+                    {lineView === "all" ? (
+                      <Line
+                        type="monotone"
+                        dataKey="total"
+                        name="Total"
+                        stroke="#3B82F6"
+                        strokeWidth={2.5}
+                        dot={{ r: 3, fill: "#3B82F6", stroke: "var(--bg-surface)", strokeWidth: 2 }}
+                        activeDot={{ r: 5, fill: "#60A5FA" }}
+                      />
+                    ) : (
+                      categorySeries.map((series) => (
+                        <Line
+                          key={series.key}
+                          type="monotone"
+                          dataKey={series.key}
+                          name={series.name}
+                          stroke={series.color}
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4 }}
+                        />
+                      ))
+                    )}
+                  </LineChart>
                 </ResponsiveContainer>
               )}
           </div>

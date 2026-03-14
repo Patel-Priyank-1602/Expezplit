@@ -74,7 +74,7 @@ export function HomePage() {
             <div className="feat-icon blue">G</div>
             <h3>Group Bill Splitting</h3>
             <p>
-              Create groups, add friends by email, and split expenses equally or
+              Create groups, share invite codes, and split expenses equally or
               with custom amounts per person.
             </p>
           </div>

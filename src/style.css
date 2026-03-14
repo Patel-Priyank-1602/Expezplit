@@ -94,6 +94,7 @@ p  { color: var(--text-secondary); line-height: 1.65; }
 .navbar {
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
   height: 60px; padding: 0 28px;
   background: var(--bg-body);
   border-bottom: 1px solid var(--border);
@@ -363,6 +364,48 @@ p  { color: var(--text-secondary); line-height: 1.65; }
 }
 .pill:hover { color: var(--text); }
 .pill.active { background: var(--accent); color: #fff; }
+
+/* Spending over time controls */
+.time-card-head {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.time-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.time-first-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.time-pills-row {
+  width: 100%;
+}
+
+.time-pills-row .filter-pills {
+  display: flex;
+  width: 100%;
+}
+
+.time-pills-row .pill {
+  flex: 1;
+  text-align: center;
+  padding: 7px 8px;
+}
+
+@media (max-width: 640px) {
+  .time-first-row {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* ── Charts ── */
 .charts-row {
@@ -828,14 +871,30 @@ p  { color: var(--text-secondary); line-height: 1.65; }
 .invite-code-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--surface);
+  justify-content: space-between;
+  gap: 14px;
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px 16px;
+  padding: 12px 16px;
   margin-bottom: 14px;
-  flex-wrap: wrap;
 }
+
+.invite-code-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.invite-code-inline {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .invite-code-label {
   font-size: 12px;
   font-weight: 600;
@@ -848,10 +907,10 @@ p  { color: var(--text-secondary); line-height: 1.65; }
   font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
   font-size: 15px;
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: 2.5px;
   color: var(--accent);
   background: var(--bg-raised);
-  padding: 4px 12px;
+  padding: 6px 12px;
   border-radius: 8px;
   user-select: all;
   cursor: text;
@@ -862,33 +921,40 @@ p  { color: var(--text-secondary); line-height: 1.65; }
   font-style: italic;
 }
 .btn-copy {
-  padding: 5px 12px;
+  padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg-surface);
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
 .btn-copy:hover { background: var(--bg-raised); }
+
+.invite-code-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
 .btn-refresh {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 12px;
+  padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg-surface);
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s;
   white-space: nowrap;
-  margin-left: auto;
 }
 .btn-refresh:hover:not(:disabled) { background: var(--bg-raised); }
 .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -896,7 +962,6 @@ p  { color: var(--text-secondary); line-height: 1.65; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .refresh-icon.spinning { animation: spin 0.7s linear infinite; }
 .admin-badge {
-  margin-left: auto;
   font-size: 11px;
   font-weight: 700;
   color: var(--accent);
@@ -1118,6 +1183,39 @@ p  { color: var(--text-secondary); line-height: 1.65; }
   .field .btn { width: 100%; padding: 10px; margin-top: 4px; }
   /* Prevent iOS Safari auto-zoom by forcing >=16px font */
   .field-input, .field-select { font-size: 16px; padding: 11px 12px; }
+
+  .invite-code-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .invite-code-main {
+    width: 100%;
+  }
+
+  .invite-code-inline {
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  .invite-code-value {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .invite-code-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .btn-refresh {
+    flex: 1;
+    justify-content: center;
+  }
   
   .hidden-mobile { display: none !important; }
 

@@ -106,6 +106,17 @@ function App() {
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
+  const themeToggleButton = (
+    <button
+      className="theme-toggle"
+      onClick={toggleTheme}
+      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label="Toggle theme"
+    >
+      {theme === "dark" ? "☀" : "☾"}
+    </button>
+  );
+
   const downloadExpensesCsv = async (userId: string, stamp: string) => {
     const { data, error } = await supabase
       .from("expenses")
@@ -332,15 +343,6 @@ function App() {
         </div>
 
         <div className="navbar-actions">
-          <button
-            className="theme-toggle"
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? "☀" : "☾"}
-          </button>
-
           <Show when="signed-out">
             <SignInButton mode="modal">
               <button className="btn btn-ghost">Sign in</button>
@@ -348,9 +350,11 @@ function App() {
             <SignUpButton mode="modal">
               <button className="btn btn-primary btn-sm">Sign up</button>
             </SignUpButton>
+            {themeToggleButton}
           </Show>
 
           <Show when="signed-in">
+            {themeToggleButton}
             <button className="btn btn-secondary btn-sm" onClick={handleDownloadAllCsv} disabled={isExporting}>
               {isExporting ? "Preparing..." : "Download CSV"}
             </button>

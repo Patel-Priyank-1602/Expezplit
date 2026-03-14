@@ -952,46 +952,53 @@ export function Splitwise() {
         <>
           {/* Invite code bar */}
           <div className="invite-code-bar">
-            <span className="invite-code-label">Invite Code</span>
-            {currentGroup.invite_code ? (
-              <>
-                <code className="invite-code-value">{currentGroup.invite_code}</code>
-                <button
-                  type="button"
-                  className="btn-copy"
-                  onClick={() => {
-                    navigator.clipboard.writeText(currentGroup.invite_code!);
-                    setCopiedCode(true);
-                    setTimeout(() => setCopiedCode(false), 2000);
-                  }}
-                >
-                  {copiedCode ? "✓ Copied" : "Copy"}
+            <div className="invite-code-main">
+              <span className="invite-code-label">Invite Code</span>
+
+              {currentGroup.invite_code ? (
+                <div className="invite-code-inline">
+                  <code className="invite-code-value">{currentGroup.invite_code}</code>
+                  <button
+                    type="button"
+                    className="btn-copy"
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentGroup.invite_code!);
+                      setCopiedCode(true);
+                      setTimeout(() => setCopiedCode(false), 2000);
+                    }}
+                  >
+                    {copiedCode ? "✓ Copied" : "Copy"}
+                  </button>
+                </div>
+              ) : isAdmin(currentGroup) ? (
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleGenerateInviteCode(currentGroup)}>
+                  Generate code
                 </button>
-              </>
-            ) : isAdmin(currentGroup) ? (
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleGenerateInviteCode(currentGroup)}>
-                Generate code
+              ) : (
+                <span className="invite-code-empty">No code yet - ask the group admin</span>
+              )}
+            </div>
+
+            <div className="invite-code-actions">
+              <button
+                type="button"
+                className="btn-refresh"
+                disabled={refreshing}
+                title="Refresh group data"
+                onClick={async () => {
+                  setRefreshing(true);
+                  await fetchGroups();
+                  setRefreshing(false);
+                }}
+              >
+                <span className={refreshing ? "refresh-icon spinning" : "refresh-icon"}>↻</span>
+                {refreshing ? "Refreshing..." : "Refresh"}
               </button>
-            ) : (
-              <span className="invite-code-empty">No code yet — ask the group admin</span>
-            )}
-            <button
-              type="button"
-              className="btn-refresh"
-              disabled={refreshing}
-              title="Refresh group data"
-              onClick={async () => {
-                setRefreshing(true);
-                await fetchGroups();
-                setRefreshing(false);
-              }}
-            >
-              <span className={refreshing ? "refresh-icon spinning" : "refresh-icon"}>↻</span>
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </button>
-            {isAdmin(currentGroup) && (
-              <span className="admin-badge">Admin</span>
-            )}
+
+              {isAdmin(currentGroup) && (
+                <span className="admin-badge">Admin</span>
+              )}
+            </div>
           </div>
 
           <div className="splitwise-currency-row">
