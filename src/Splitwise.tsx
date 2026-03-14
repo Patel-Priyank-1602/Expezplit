@@ -121,8 +121,6 @@ export function Splitwise() {
   const [loading, setLoading] = useState(true);
 
   const [groupName, setGroupName] = useState("");
-  const [memberName, setMemberName] = useState("");
-  const [memberEmail, setMemberEmail] = useState("");
 
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
@@ -611,33 +609,6 @@ export function Splitwise() {
     if (error) { window.alert("Failed to generate invite code. Please try again."); return; }
     setGroups((prev) => prev.map((g) => g.id === group.id ? { ...g, invite_code: code } : g));
   };
-  const addMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentGroup || !memberName.trim() || !memberEmail.trim()) return;
-
-    const isSelf = !!user && memberEmail.toLowerCase() === user.primaryEmailAddress?.emailAddress?.toLowerCase();
-
-    const { data: mem, error } = await supabase
-      .from("group_members")
-      .insert({
-        group_id: currentGroup.id,
-        name: memberName.trim(),
-        email: memberEmail.trim(),
-        is_current_user: isSelf,
-      })
-      .select()
-      .single();
-
-    if (error || !mem) { console.error("Error adding member:", error?.message); return; }
-
-    const m: Member = { id: mem.id, name: mem.name, email: mem.email, is_current_user: mem.is_current_user };
-    const updated = { ...currentGroup, members: [...currentGroup.members, m] };
-    setGroups((p) => p.map((g) => (g.id === updated.id ? updated : g)));
-    setSelectedIds((p) => new Set([...p, m.id]));
-    setMemberName("");
-    setMemberEmail("");
-  };
-
   /* ─── Toggle split member ─── */
   const toggle = (mid: string) => {
     setSelectedIds((p) => { const n = new Set(p); n.has(mid) ? n.delete(mid) : n.add(mid); return n; });
@@ -1141,27 +1112,11 @@ export function Splitwise() {
           {/* Left: Members */}
           <div className="card">
             <div className="card-title" style={{ marginBottom: 14 }}>Members</div>
-            <form onSubmit={addMember}>
-              <div className="form-row">
-                <div className="field">
-                  <label className="field-label">Name</label>
-                  <input className="field-input" value={memberName} onChange={(e) => setMemberName(e.target.value)} placeholder="Friend name" />
-                </div>
-                <div className="field">
-                  <label className="field-label">Email</label>
-                  <input className="field-input" type="email" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="friend@example.com" />
-                </div>
-                <div className="field" style={{ flex: "0 0 auto" }}>
-                  <label className="field-label hidden-mobile">&nbsp;</label>
-                  <button type="submit" className="btn btn-secondary btn-sm">Add</button>
-                </div>
-              </div>
-            </form>
 
             <ul className="member-list">
               {currentGroup.members.length === 0 ? (
                 <li style={{ textAlign: "center", padding: 20, color: "var(--text-muted)", fontSize: 14 }}>
-                  No members yet. Add yourself and friends.
+                  No members found in this group.
                 </li>
               ) : (
                 currentGroup.members.map((m) => {
