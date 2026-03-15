@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useUser } from "@clerk/react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "./lib/supabase";
+import { createExpenseNotifications, settleNotification } from "./Notifications";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const COLORS = ["#7C5CFC", "#22C55E", "#F59E0B", "#EF4444", "#3B82F6", "#8B5CF6"];
@@ -73,7 +74,7 @@ const formatCurrencyChip = (code: string) => {
 };
 
 /* Types (matching Supabase schema) */
-type Member = { id: string; name: string; email: string; is_current_user: boolean };
+type Member = { id: string; name: string; email: string; is_current_user: boolean; avatar_url?: string };
 type SplitDetail = { id?: string; member_id: string; amount: number };
 type GroupExpense = {
   id: string;
@@ -265,6 +266,17 @@ export function Splitwise() {
   }, []);
 
   useEffect(() => {
+    if (!isAllTransactionsOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isAllTransactionsOpen]);
+
+  useEffect(() => {
     if (!EXCHANGE_RATE_API_KEY) {
       setRatesError("Exchange-rate API key missing. Set VITE_EXCHANGE_RATE_API_KEY.");
       return;
@@ -385,7 +397,7 @@ export function Splitwise() {
     const assembled: Group[] = groupRows.map((g: any) => {
       const members: Member[] = (memberRows ?? [])
         .filter((m: any) => m.group_id === g.id)
-        .map((m: any) => ({ id: m.id, name: m.name, email: m.email, is_current_user: m.is_current_user }));
+        .map((m: any) => ({ id: m.id, name: m.name, email: m.email, is_current_user: m.is_current_user, avatar_url: m.avatar_url }));
 
       const expenses: GroupExpense[] = (expenseRows ?? [])
         .filter((e: any) => e.group_id === g.id)
@@ -418,6 +430,26 @@ export function Splitwise() {
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
+  /* ─── Sync user's avatar to database on load ─── */
+  useEffect(() => {
+    async function syncAvatarUrl() {
+      if (!userEmail || !user?.imageUrl) return;
+      await supabase
+        .from("group_members")
+        .update({ avatar_url: user.imageUrl })
+        .eq("email", userEmail)
+        .is("avatar_url", null); // Only update null avatars to save writes
+    }
+    syncAvatarUrl();
+  }, [userEmail, user?.imageUrl]);
+
+  /* ─── Listen for settlements made from Notifications panel ─── */
+  useEffect(() => {
+    const onSettled = () => { fetchGroups(); };
+    window.addEventListener("expense-settled", onSettled);
+    return () => window.removeEventListener("expense-settled", onSettled);
+  }, [fetchGroups]);
+
   /* ─── Create group ─── */
   const createGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -449,10 +481,11 @@ export function Splitwise() {
           name: user.fullName || user.firstName || "You",
           email: user.primaryEmailAddress?.emailAddress || "",
           is_current_user: true,
+          avatar_url: user.imageUrl || null,
         })
         .select()
         .single();
-      if (mem) selfMember = { id: mem.id, name: mem.name, email: mem.email, is_current_user: true };
+      if (mem) selfMember = { id: mem.id, name: mem.name, email: mem.email, is_current_user: true, avatar_url: mem.avatar_url };
     }
 
     const newGroup: Group = {
@@ -583,6 +616,7 @@ export function Splitwise() {
         name: user.fullName || user.firstName || "User",
         email: userEmail,
         is_current_user: true,
+        avatar_url: user.imageUrl || null,
       });
 
     if (insertErr) {
@@ -677,6 +711,25 @@ export function Splitwise() {
 
     const updated = { ...currentGroup, expenses: [...currentGroup.expenses, newExp] };
     setGroups((p) => p.map((g) => (g.id === updated.id ? updated : g)));
+
+    // Create real-time notifications for all involved members
+    createExpenseNotifications({
+      expenseId: exp.id,
+      groupId: currentGroup.id,
+      description: expDesc.trim(),
+      amount: valBase,
+      paidByName: currentGroup.members.find((m) => m.id === (paidById || currentGroup.members[0]?.id))?.name ?? "Unknown",
+      paidByEmail: currentGroup.members.find((m) => m.id === (paidById || currentGroup.members[0]?.id))?.email ?? "",
+      splits: (splitData ?? []).map((s: any) => {
+        const member = currentGroup.members.find((m) => m.id === s.member_id);
+        return {
+          memberName: member?.name ?? "Unknown",
+          memberEmail: member?.email ?? "",
+          amount: Number(s.amount),
+        };
+      }),
+    });
+
     setExpDesc(""); setExpAmount(""); setCustomAmounts({});
   };
 
@@ -738,6 +791,18 @@ export function Splitwise() {
 
     const updated = { ...currentGroup, expenses: [...currentGroup.expenses, newExp] };
     setGroups((p) => p.map((g) => (g.id === updated.id ? updated : g)));
+
+    // Settle notifications for payer -> receiver
+    const payerMember = currentGroup.members.find((m) => m.id === fromId);
+    const receiverMember = currentGroup.members.find((m) => m.id === state.toId);
+    if (payerMember && receiverMember) {
+      settleNotification({
+        payerEmail: payerMember.email,
+        receiverEmail: receiverMember.email,
+        groupId: currentGroup.id,
+      });
+    }
+
     setSettleState((p) => { const n = { ...p }; delete n[fromId]; return n; });
   };
 
@@ -842,6 +907,18 @@ export function Splitwise() {
   }, [currentGroup]);
 
   const initial = (n: string) => n.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  const getMemberAvatarUrl = useCallback((member: Member) => {
+    // If we have an avatar URL saved in the database, always use it
+    if (member.avatar_url) return member.avatar_url;
+
+    // Fallback logic for logged-in user if not saved
+    const memberEmail = member.email.trim().toLowerCase();
+    if (memberEmail && userEmail && memberEmail === userEmail && user?.imageUrl) {
+      return user.imageUrl;
+    }
+    
+    return null;
+  }, [userEmail, user?.imageUrl]);
 
   if (loading) {
     return (
@@ -1128,10 +1205,17 @@ export function Splitwise() {
               ) : (
                 currentGroup.members.map((m) => {
                   const b = balances.get(m.id) ?? 0;
+                  const avatarUrl = getMemberAvatarUrl(m);
                   return (
                     <li key={m.id} className="member-item" style={{ flexWrap: "wrap", justifyContent: "space-between", gap: 12 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 auto", minWidth: 200 }}>
-                        <div className="avatar">{initial(m.name)}</div>
+                        <div className="avatar">
+                          {avatarUrl ? (
+                            <img className="avatar-img" src={avatarUrl} alt={`${m.name} avatar`} loading="lazy" />
+                          ) : (
+                            initial(m.name)
+                          )}
+                        </div>
                         <div className="member-info">
                           <div className="member-name">
                             {m.name}
@@ -1144,7 +1228,7 @@ export function Splitwise() {
                         <div className={`balance-text ${b > 0.01 ? "gets" : b < -0.01 ? "owes" : "even"}`}>
                           {b > 0.01 ? `gets ${currencySymbol}${convertFromBase(b).toFixed(2)}` : b < -0.01 ? `owes ${currencySymbol}${convertFromBase(Math.abs(b)).toFixed(2)}` : "settled"}
                         </div>
-                        {b < -0.01 && !settleState[m.id] && (
+                        {b < -0.01 && isMe(m) && !settleState[m.id] && (
                           <button className="btn btn-secondary btn-sm" onClick={() => setSettleState({ ...settleState, [m.id]: { toId: "", amount: convertFromBase(Math.abs(b)).toFixed(2) } })}>Pay</button>
                         )}
                         {isAdmin(currentGroup) && (
@@ -1185,11 +1269,19 @@ export function Splitwise() {
                     const fromMem = currentGroup.members.find((m) => m.id === debt.from);
                     const toMem = currentGroup.members.find((m) => m.id === debt.to);
                     if (!fromMem || !toMem) return null;
+                    const fromAvatarUrl = getMemberAvatarUrl(fromMem);
+                    const toAvatarUrl = getMemberAvatarUrl(toMem);
                     
                     return (
                       <div key={idx} className="debt-card">
                         <div className="debt-person debtor">
-                          <div className="debt-avatar">{initial(fromMem.name)}</div>
+                          <div className="debt-avatar">
+                            {fromAvatarUrl ? (
+                              <img className="debt-avatar-img" src={fromAvatarUrl} alt={`${fromMem.name} avatar`} loading="lazy" />
+                            ) : (
+                              initial(fromMem.name)
+                            )}
+                          </div>
                           <div className="debt-name">{isMe(fromMem) ? "You" : fromMem.name}</div>
                         </div>
                         
@@ -1200,7 +1292,13 @@ export function Splitwise() {
                         </div>
 
                         <div className="debt-person creditor">
-                          <div className="debt-avatar">{initial(toMem.name)}</div>
+                          <div className="debt-avatar">
+                            {toAvatarUrl ? (
+                              <img className="debt-avatar-img" src={toAvatarUrl} alt={`${toMem.name} avatar`} loading="lazy" />
+                            ) : (
+                              initial(toMem.name)
+                            )}
+                          </div>
                           <div className="debt-name">{isMe(toMem) ? "You" : toMem.name}</div>
                         </div>
                       </div>
@@ -1357,20 +1455,55 @@ export function Splitwise() {
                     ) : (
                       transactionsSorted.map((exp) => {
                         const payer = currentGroup.members.find((m) => m.id === exp.paid_by_id);
+                        const payerName = payer ? (isMe(payer) ? "You" : payer.name) : "Unknown";
+                        const splitTargets = exp.splits.map((split) => {
+                          const member = currentGroup.members.find((m) => m.id === split.member_id);
+                          return member ? (isMe(member) ? "You" : member.name) : "Unknown";
+                        });
+                        const splitTargetsText = splitTargets.length > 0 ? splitTargets.join(", ") : "No split members";
+                        const splitWithAmounts = exp.splits
+                          .map((split) => {
+                            const member = currentGroup.members.find((m) => m.id === split.member_id);
+                            const name = member ? (isMe(member) ? "You" : member.name) : "Unknown";
+                            return `${name} (${currencySymbol}${convertFromBase(split.amount).toFixed(2)})`;
+                          })
+                          .join(", ");
+                        const payFlow =
+                          exp.description === "Payment" && exp.splits.length === 1
+                            ? `${payerName} -> ${splitTargets[0] ?? "Unknown"}`
+                            : `${payerName} -> ${exp.splits.length} ${exp.splits.length === 1 ? "person" : "people"}`;
+                        const txType = exp.description === "Payment" ? "Settlement" : "Expense";
+                        const createdAtText = format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm");
+
                         return (
-                          <li key={exp.id} className="exp-item">
-                            <div>
-                              <div className="exp-desc">{exp.description}</div>
-                              <div className="exp-meta">
-                                Paid by {payer?.name ?? "Unknown"} &middot;{" "}
-                                <span className={`split-tag ${exp.split_type}`}>{exp.split_type === "equal" ? "Equal" : "Custom"}</span> &middot;{" "}
-                                {exp.splits.length} {exp.splits.length === 1 ? "person" : "people"} &middot;{" "}
-                                {format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}
+                          <li key={exp.id} className="exp-item exp-item-detailed">
+                            <div className="exp-item-main">
+                              <div className="txn-head-row">
+                                <div>
+                                  <div className="exp-desc">{exp.description}</div>
+                                  <div className="txn-pill-row">
+                                    <span className={`txn-type-pill ${txType === "Settlement" ? "settlement" : "expense"}`}>{txType}</span>
+                                    <span className={`split-tag ${exp.split_type}`}>{exp.split_type === "equal" ? "Equal" : "Custom"}</span>
+                                    <span className="txn-date-pill">{createdAtText}</span>
+                                  </div>
+                                </div>
+
+                                <div className="txn-actions">
+                                  <span className="exp-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</span>
+                                  <button className="btn-danger" onClick={() => deleteExp(exp.id)} title="Delete">✕</button>
+                                </div>
                               </div>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <span className="exp-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</span>
-                              <button className="btn-danger" onClick={() => deleteExp(exp.id)} title="Delete">✕</button>
+
+                              <div className="txn-meta-grid">
+                                <div className="txn-meta-item">
+                                  <span className="txn-label">Who pay to who</span>
+                                  <span className="txn-value">{payFlow}</span>
+                                </div>
+                                <div className="txn-meta-item txn-meta-item-wide">
+                                  <span className="txn-label">Split list</span>
+                                  <span className="txn-value">{splitWithAmounts || "No split details"}</span>
+                                </div>
+                              </div>
                             </div>
                           </li>
                         );

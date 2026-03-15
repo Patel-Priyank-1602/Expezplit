@@ -9,6 +9,7 @@ import {
 import { HomePage } from "./HomePage";
 import { ExpenseTracker } from "./ExpenseTracker";
 import { Splitwise } from "./Splitwise";
+import { Notifications } from "./Notifications";
 import { supabase } from "./lib/supabase";
 
 type TabKey = "expense" | "splitwise";
@@ -340,6 +341,11 @@ function App() {
             <img src="/favicon.svg" alt="Expezplit logo" className="logo-mark-img" />
           </div>
           <div className="logo-text">Expezplit</div>
+          <Show when="signed-in">
+            <button className="btn btn-secondary btn-sm" onClick={handleDownloadAllCsv} disabled={isExporting} style={{ marginLeft: 12 }}>
+              {isExporting ? "Preparing..." : "Download CSV"}
+            </button>
+          </Show>
         </div>
 
         <div className="navbar-actions">
@@ -355,9 +361,7 @@ function App() {
 
           <Show when="signed-in">
             {themeToggleButton}
-            <button className="btn btn-secondary btn-sm" onClick={handleDownloadAllCsv} disabled={isExporting}>
-              {isExporting ? "Preparing..." : "Download CSV"}
-            </button>
+            <Notifications />
             <UserButton
               appearance={{
                 elements: { avatarBox: { width: 34, height: 34 } },

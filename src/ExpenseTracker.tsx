@@ -222,6 +222,18 @@ export function ExpenseTracker() {
   }, []);
 
   useEffect(() => {
+    const isModalOpen = isTopExpensesOpen || isRecentExpensesOpen;
+    if (!isModalOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isTopExpensesOpen, isRecentExpensesOpen]);
+
+  useEffect(() => {
     if (!EXCHANGE_RATE_API_KEY) {
       setRatesError("Exchange-rate API key missing. Set VITE_EXCHANGE_RATE_API_KEY.");
       return;
@@ -361,13 +373,49 @@ export function ExpenseTracker() {
     [expenses],
   );
 
+  const maxAmountAcrossAllExpenses = useMemo(
+    () => allExpensesByAmount[0]?.amount ?? 0,
+    [allExpensesByAmount],
+  );
+
   const recentExpenses = useMemo(
     () => allExpensesByRecent.slice(0, 5),
     [allExpensesByRecent],
   );
 
+  const maxAmountInRecentExpenses = useMemo(
+    () => recentExpenses.reduce((max, exp) => Math.max(max, exp.amount), 0),
+    [recentExpenses],
+  );
+
   const totalSpent = useMemo(() => convertedFiltered.reduce((s, e) => s + e.amount, 0), [convertedFiltered]);
   const catCount = useMemo(() => new Set(convertedFiltered.map((e) => e.category)).size, [convertedFiltered]);
+
+  const categoryColorMap = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(expenses.map((e) => e.category.trim()).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b),
+    );
+
+    return Object.fromEntries(
+      uniqueCategories.map((cat, index) => [cat, PIE_COLORS[index % PIE_COLORS.length]]),
+    ) as Record<string, string>;
+  }, [expenses]);
+
+  const getCategoryColor = useCallback(
+    (categoryName: string) => categoryColorMap[categoryName.trim()] ?? PIE_COLORS[0],
+    [categoryColorMap],
+  );
+
+  const getCategoryTagStyle = useCallback(
+    (categoryName: string) => {
+      const color = getCategoryColor(categoryName);
+      return {
+        color,
+        backgroundColor: `${color}22`,
+      };
+    },
+    [getCategoryColor],
+  );
 
   /* Pie data */
   const pieData = useMemo(() => {
@@ -378,8 +426,9 @@ export function ExpenseTracker() {
       name: cat,
       value: val,
       pct: total ? ((val / total) * 100).toFixed(1) : "0",
+      color: getCategoryColor(cat),
     }));
-  }, [convertedFiltered]);
+  }, [convertedFiltered, getCategoryColor]);
 
   /* Line data */
   const { lineData, categoryLineData, categorySeries } = useMemo(() => {
@@ -728,8 +777,8 @@ export function ExpenseTracker() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie dataKey="value" data={pieData} nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2} strokeWidth={0}>
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      {pieData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip
@@ -951,18 +1000,20 @@ export function ExpenseTracker() {
               <li className="top-expense-empty">No expenses yet. Add your first one above.</li>
             ) : (
               topExpenses.map((exp, index) => (
-                <li key={exp.id} className="top-expense-item">
-                  <div className="top-expense-left">
-                    <span className="top-expense-rank">#{index + 1}</span>
-                    <div>
-                      <div className="top-expense-name">{exp.name}</div>
-                      <div className="top-expense-meta">
-                        <span className="cat-tag">{exp.category}</span>
-                        <span>{format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}</span>
+                <li key={exp.id} className="top-expense-ranked-row">
+                  <span className="top-expense-bg-rank">{index + 1}</span>
+                  <div className="top-expense-item top-expense-item-ranked">
+                    <div className="top-expense-left">
+                      <div>
+                        <div className="top-expense-name">{exp.name}</div>
+                        <div className="top-expense-meta">
+                          <span className="cat-tag" style={getCategoryTagStyle(exp.category)}>{exp.category}</span>
+                          <span>{format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="top-expense-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</div>
                   </div>
-                  <div className="top-expense-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</div>
                 </li>
               ))
             )}
@@ -986,18 +1037,20 @@ export function ExpenseTracker() {
               <li className="top-expense-empty">No expenses yet. Add your first one above.</li>
             ) : (
               recentExpenses.map((exp, index) => (
-                <li key={exp.id} className="top-expense-item">
-                  <div className="top-expense-left">
-                    <span className="top-expense-rank">#{index + 1}</span>
-                    <div>
-                      <div className="top-expense-name">{exp.name}</div>
-                      <div className="top-expense-meta">
-                        <span className="cat-tag">{exp.category}</span>
-                        <span>{format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}</span>
+                <li key={exp.id} className="top-expense-ranked-row">
+                  <span className="top-expense-bg-rank">{index + 1}</span>
+                  <div className="top-expense-item top-expense-item-ranked">
+                    <div className="top-expense-left">
+                      <div>
+                        <div className="top-expense-name">{exp.name}</div>
+                        <div className="top-expense-meta">
+                          <span className="cat-tag" style={getCategoryTagStyle(exp.category)}>{exp.category}</span>
+                          <span>{format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="top-expense-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</div>
                   </div>
-                  <div className="top-expense-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</div>
                 </li>
               ))
             )}
@@ -1024,21 +1077,35 @@ export function ExpenseTracker() {
                     <th>Name</th>
                     <th>Category</th>
                     <th>Amount</th>
+                    <th>Spend bar</th>
                     <th style={{ width: 50 }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {allExpensesByAmount.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="td-empty">No expenses yet. Add your first one above.</td>
+                      <td colSpan={6} className="td-empty">No expenses yet. Add your first one above.</td>
                     </tr>
                   ) : (
                     allExpensesByAmount.map((exp) => (
                       <tr key={exp.id}>
                         <td className="td-date">{format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}</td>
                         <td>{exp.name}</td>
-                        <td><span className="cat-tag">{exp.category}</span></td>
+                        <td><span className="cat-tag" style={getCategoryTagStyle(exp.category)}>{exp.category}</span></td>
                         <td className="td-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</td>
+                        <td>
+                          <div className="expense-progress-track">
+                            <div
+                              className="expense-progress-fill"
+                              style={{
+                                width:
+                                  maxAmountAcrossAllExpenses > 0
+                                    ? `${Math.max((exp.amount / maxAmountAcrossAllExpenses) * 100, 4)}%`
+                                    : "0%",
+                              }}
+                            />
+                          </div>
+                        </td>
                         <td>
                           <button className="btn-danger" onClick={() => handleDelete(exp.id)} title="Delete">✕</button>
                         </td>
@@ -1071,21 +1138,35 @@ export function ExpenseTracker() {
                     <th>Name</th>
                     <th>Category</th>
                     <th>Amount</th>
+                    <th>Spend bar</th>
                     <th style={{ width: 50 }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {allExpensesByRecent.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="td-empty">No expenses yet. Add your first one above.</td>
+                      <td colSpan={6} className="td-empty">No expenses yet. Add your first one above.</td>
                     </tr>
                   ) : (
                     allExpensesByRecent.map((exp) => (
                       <tr key={exp.id}>
                         <td className="td-date">{format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}</td>
                         <td>{exp.name}</td>
-                        <td><span className="cat-tag">{exp.category}</span></td>
+                        <td><span className="cat-tag" style={getCategoryTagStyle(exp.category)}>{exp.category}</span></td>
                         <td className="td-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</td>
+                        <td>
+                          <div className="expense-progress-track">
+                            <div
+                              className="expense-progress-fill"
+                              style={{
+                                width:
+                                  maxAmountInRecentExpenses > 0
+                                    ? `${Math.max((exp.amount / maxAmountInRecentExpenses) * 100, 4)}%`
+                                    : "0%",
+                              }}
+                            />
+                          </div>
+                        </td>
                         <td>
                           <button className="btn-danger" onClick={() => handleDelete(exp.id)} title="Delete">✕</button>
                         </td>
