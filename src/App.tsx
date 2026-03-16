@@ -351,10 +351,10 @@ function App() {
         <div className="navbar-actions">
           <Show when="signed-out">
             <SignInButton mode="modal">
-              <button className="btn btn-ghost">Sign in</button>
+              <button className="btn btn-ghost">Login</button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <button className="btn btn-primary btn-sm">Sign up</button>
+              <button className="btn btn-primary btn-sm">Register</button>
             </SignUpButton>
             {themeToggleButton}
           </Show>

@@ -2,7 +2,7 @@ import { SignInButton, SignUpButton } from "@clerk/react";
 
 export function HomePage() {
   return (
-    <>
+    <div className="home-landing">
       {/* Hero */}
       <section className="hero">
         <div className="hero-tag">Free to use — no credit card required</div>
@@ -147,6 +147,6 @@ export function HomePage() {
           </SignUpButton>
         </div>
       </section>
-    </>
+    </div>
   );
 }
