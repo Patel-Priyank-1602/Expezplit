@@ -340,7 +340,7 @@ function App() {
           <div className="logo-mark">
             <img src="/favicon.svg" alt="Expezplit logo" className="logo-mark-img" />
           </div>
-          <div className="logo-text">Expezplit</div>
+          <div className="logo-text">ExpeZplit</div>
           <Show when="signed-in">
             <button className="btn btn-secondary btn-sm" onClick={handleDownloadAllCsv} disabled={isExporting} style={{ marginLeft: 12 }}>
               {isExporting ? "Preparing..." : "Download CSV"}
