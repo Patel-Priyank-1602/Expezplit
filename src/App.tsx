@@ -89,7 +89,14 @@ const isMissingCurrencyColumnError = (message: string | undefined) =>
   /column\s+.*currency.*does not exist/i.test(message ?? "");
 
 function App() {
-  const [tab, setTab] = useState<TabKey>("expense");
+  const [tab, setTab] = useState<TabKey>(() => {
+    // Auto-switch to Splitwise tab if joining via QR code scan (Google Lens etc.)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("join")) return "splitwise";
+    }
+    return "expense";
+  });
   const { isLoaded, isSignedIn, user } = useUser();
   const [isExporting, setIsExporting] = useState(false);
 
