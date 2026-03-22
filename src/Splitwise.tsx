@@ -74,7 +74,7 @@ const formatCurrencyChip = (code: string) => {
 };
 
 /* Types (matching Supabase schema) */
-type Member = { id: string; name: string; email: string; is_current_user: boolean; avatar_url?: string };
+type Member = { id: string; name: string; email: string; is_current_user: boolean; avatar_url?: string; upi_id?: string | null };
 type SplitDetail = { id?: string; member_id: string; amount: number };
 type GroupExpense = {
   id: string;
@@ -157,6 +157,15 @@ export function Splitwise() {
   const [joinLoading, setJoinLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // UPI payment state
+  const [joinUpiId, setJoinUpiId] = useState("");
+  const [showJoinUpiStep, setShowJoinUpiStep] = useState(false);
+  const [pendingJoinGroupId, setPendingJoinGroupId] = useState<string | null>(null);
+  const [upiPayModal, setUpiPayModal] = useState<{ open: boolean; fromMember: Member | null; toMember: Member | null; amount: number } | null>(null);
+  const [upiCopied, setUpiCopied] = useState(false);
+  const [editingMyUpi, setEditingMyUpi] = useState(false);
+  const [myUpiInput, setMyUpiInput] = useState("");
 
   const hasSelectedRate = currencyCode === BASE_CURRENCY || (conversionRates[currencyCode] ?? 0) > 0;
   const activeCurrencyCode: CurrencyCode = hasSelectedRate ? currencyCode : BASE_CURRENCY;
@@ -397,7 +406,7 @@ export function Splitwise() {
     const assembled: Group[] = groupRows.map((g: any) => {
       const members: Member[] = (memberRows ?? [])
         .filter((m: any) => m.group_id === g.id)
-        .map((m: any) => ({ id: m.id, name: m.name, email: m.email, is_current_user: m.is_current_user, avatar_url: m.avatar_url }));
+        .map((m: any) => ({ id: m.id, name: m.name, email: m.email, is_current_user: m.is_current_user, avatar_url: m.avatar_url, upi_id: m.upi_id ?? null }));
 
       const expenses: GroupExpense[] = (expenseRows ?? [])
         .filter((e: any) => e.group_id === g.id)
@@ -609,14 +618,28 @@ export function Splitwise() {
       return;
     }
 
+    // Show UPI ID step before finalizing join
+    setPendingJoinGroupId(groupData.id);
+    setShowJoinUpiStep(true);
+    setJoinUpiId("");
+    setJoinLoading(false);
+  };
+
+  /* ─── Finalize joining group with optional UPI ID ─── */
+  const finalizeJoinGroup = async () => {
+    if (!pendingJoinGroupId || !userId || !user) return;
+    setJoinLoading(true);
+
+    const userEmail = user.primaryEmailAddress?.emailAddress ?? "";
     const { error: insertErr } = await supabase
       .from("group_members")
       .insert({
-        group_id: groupData.id,
+        group_id: pendingJoinGroupId,
         name: user.fullName || user.firstName || "User",
         email: userEmail,
         is_current_user: true,
         avatar_url: user.imageUrl || null,
+        upi_id: joinUpiId.trim() || null,
       });
 
     if (insertErr) {
@@ -629,7 +652,54 @@ export function Splitwise() {
     setJoinCode("");
     setJoinError(null);
     setJoinLoading(false);
-    setSelectedGroupId(groupData.id);
+    setSelectedGroupId(pendingJoinGroupId);
+    setShowJoinUpiStep(false);
+    setPendingJoinGroupId(null);
+    setJoinUpiId("");
+  };
+
+  /* ─── Update UPI ID for current user in current group ─── */
+  const updateMyUpiId = async () => {
+    if (!currentGroup) return;
+    const me = currentGroup.members.find((m) => isMe(m));
+    if (!me) return;
+
+    const { error } = await supabase
+      .from("group_members")
+      .update({ upi_id: myUpiInput.trim() || null })
+      .eq("id", me.id);
+
+    if (error) {
+      console.error("Error updating UPI ID:", error.message);
+      return;
+    }
+
+    // Update local state
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === currentGroup.id
+          ? { ...g, members: g.members.map((m) => m.id === me.id ? { ...m, upi_id: myUpiInput.trim() || null } : m) }
+          : g
+      )
+    );
+    setEditingMyUpi(false);
+  };
+
+  /* ─── Open UPI payment ─── */
+  const openUpiPayment = (fromMember: Member, toMember: Member, amount: number) => {
+    setUpiPayModal({ open: true, fromMember, toMember, amount });
+    setUpiCopied(false);
+  };
+
+  const launchUpiApp = () => {
+    if (!upiPayModal?.toMember?.upi_id || !upiPayModal) return;
+    const payeeUpi = upiPayModal.toMember.upi_id;
+    const payeeName = upiPayModal.toMember.name;
+    const amtDisplay = convertFromBase(upiPayModal.amount).toFixed(2);
+
+    // Standard UPI deep link - works on Android & iOS
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(payeeUpi)}&pn=${encodeURIComponent(payeeName)}&am=${amtDisplay}&cu=INR&tn=${encodeURIComponent(`ExpSplit payment to ${payeeName}`)}`;
+    window.location.href = upiUrl;
   };
 
   /* ─── Generate invite code for existing groups without one ─── */
@@ -950,28 +1020,72 @@ export function Splitwise() {
 
         <div className="card">
           <div className="card-title" style={{ marginBottom: 14 }}>Join a group</div>
-          <form onSubmit={handleJoinGroup}>
-            <div className="form-row">
-              <div className="field">
-                <label className="field-label">Invite code</label>
-                <input
-                  className="field-input"
-                  value={joinCode}
-                  onChange={(e) => { setJoinCode(e.target.value); setJoinError(null); }}
-                  placeholder="Enter 9-character invite code..."
-                  maxLength={12}
-                  autoComplete="off"
-                />
+          {!showJoinUpiStep ? (
+            <form onSubmit={handleJoinGroup}>
+              <div className="form-row">
+                <div className="field">
+                  <label className="field-label">Invite code</label>
+                  <input
+                    className="field-input"
+                    value={joinCode}
+                    onChange={(e) => { setJoinCode(e.target.value); setJoinError(null); }}
+                    placeholder="Enter 9-character invite code..."
+                    maxLength={12}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="field" style={{ flex: "0 0 auto" }}>
+                  <label className="field-label hidden-mobile">&nbsp;</label>
+                  <button type="submit" className="btn btn-secondary" disabled={joinLoading || !joinCode.trim()}>
+                    {joinLoading ? "Joining..." : "Join"}
+                  </button>
+                </div>
               </div>
-              <div className="field" style={{ flex: "0 0 auto" }}>
-                <label className="field-label hidden-mobile">&nbsp;</label>
-                <button type="submit" className="btn btn-secondary" disabled={joinLoading || !joinCode.trim()}>
-                  {joinLoading ? "Joining..." : "Join"}
+              {joinError && <div style={{ marginTop: 8, fontSize: 13, color: "var(--red, #ef4444)" }}>{joinError}</div>}
+            </form>
+          ) : (
+            <div className="upi-join-step">
+              <div style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 12 }}>
+                Enter your UPI ID so others can pay you directly. You can skip this and add it later.
+              </div>
+              <div className="form-row">
+                <div className="field">
+                  <label className="field-label">Your UPI ID</label>
+                  <input
+                    className="field-input"
+                    value={joinUpiId}
+                    onChange={(e) => setJoinUpiId(e.target.value)}
+                    placeholder="yourname@upi or 9876543210@paytm"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={finalizeJoinGroup}
+                  disabled={joinLoading}
+                >
+                  {joinLoading ? "Joining..." : "Join Group"}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => { setJoinUpiId(""); finalizeJoinGroup(); }}
+                  disabled={joinLoading}
+                >
+                  Skip
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => { setShowJoinUpiStep(false); setPendingJoinGroupId(null); }}
+                  disabled={joinLoading}
+                >
+                  Cancel
                 </button>
               </div>
+              {joinError && <div style={{ marginTop: 8, fontSize: 13, color: "var(--red, #ef4444)" }}>{joinError}</div>}
             </div>
-            {joinError && <div style={{ marginTop: 8, fontSize: 13, color: "var(--red, #ef4444)" }}>{joinError}</div>}
-          </form>
+          )}
         </div>
       </div>
 
@@ -1222,6 +1336,32 @@ export function Splitwise() {
                             {isMe(m) && <span className="you-tag">You</span>}
                           </div>
                           <div className="member-email">{m.email}</div>
+                          {m.upi_id && (
+                            <div className="member-upi">
+                              <span>{m.upi_id}</span>
+                            </div>
+                          )}
+                          {isMe(m) && !editingMyUpi && (
+                            <button
+                              className="upi-edit-btn"
+                              onClick={() => { setMyUpiInput(m.upi_id || ""); setEditingMyUpi(true); }}
+                            >
+                              {m.upi_id ? "Edit UPI ID" : "Add UPI ID"}
+                            </button>
+                          )}
+                          {isMe(m) && editingMyUpi && (
+                            <div className="upi-edit-inline">
+                              <input
+                                className="field-input"
+                                value={myUpiInput}
+                                onChange={(e) => setMyUpiInput(e.target.value)}
+                                placeholder="yourname@upi"
+                                style={{ fontSize: 12, padding: "4px 8px", height: "auto" }}
+                              />
+                              <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={updateMyUpiId}>Save</button>
+                              <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setEditingMyUpi(false)}>Cancel</button>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, flexWrap: "wrap" }}>
@@ -1229,7 +1369,21 @@ export function Splitwise() {
                           {b > 0.01 ? `gets ${currencySymbol}${convertFromBase(b).toFixed(2)}` : b < -0.01 ? `owes ${currencySymbol}${convertFromBase(Math.abs(b)).toFixed(2)}` : "settled"}
                         </div>
                         {b < -0.01 && isMe(m) && !settleState[m.id] && (
-                          <button className="btn btn-secondary btn-sm" onClick={() => setSettleState({ ...settleState, [m.id]: { toId: "", amount: convertFromBase(Math.abs(b)).toFixed(2) } })}>Pay</button>
+                          <button className="btn btn-pay btn-sm" onClick={() => {
+                            // Find who this person owes money to from optimizedDebts
+                            const debtToSettle = optimizedDebts.find((d) => d.from === m.id);
+                            if (debtToSettle) {
+                              const toMember = currentGroup.members.find((x) => x.id === debtToSettle.to);
+                              if (toMember) {
+                                openUpiPayment(m, toMember, debtToSettle.amount);
+                                return;
+                              }
+                            }
+                            // Fallback: open settle form
+                            setSettleState({ ...settleState, [m.id]: { toId: "", amount: convertFromBase(Math.abs(b)).toFixed(2) } });
+                          }}>
+                            Pay
+                          </button>
                         )}
                         {isAdmin(currentGroup) && (
                           <button className="btn-danger btn-sm" style={{ padding: "5px 10px" }} onClick={() => removeMember(m.id, m.name)} title="Remove Member">✕</button>
@@ -1516,6 +1670,125 @@ export function Splitwise() {
           </div>
           </div>
         </>
+      )}
+
+      {/* UPI Payment Modal */}
+      {upiPayModal?.open && upiPayModal.fromMember && upiPayModal.toMember && (
+        <div className="modal-backdrop" onClick={() => setUpiPayModal(null)}>
+          <div className="modal-card upi-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="upi-modal-header">
+              <div className="upi-modal-title">UPI Payment</div>
+              <button className="btn btn-secondary btn-sm" onClick={() => setUpiPayModal(null)}>Close</button>
+            </div>
+
+            <div className="upi-modal-body">
+              <div className="upi-payment-flow">
+                <div className="upi-flow-person">
+                  <div className="upi-flow-avatar">
+                    {getMemberAvatarUrl(upiPayModal.fromMember) ? (
+                      <img className="upi-flow-avatar-img" src={getMemberAvatarUrl(upiPayModal.fromMember)!} alt={upiPayModal.fromMember.name} />
+                    ) : (
+                      initial(upiPayModal.fromMember.name)
+                    )}
+                  </div>
+                  <div className="upi-flow-name">{isMe(upiPayModal.fromMember) ? "You" : upiPayModal.fromMember.name}</div>
+                </div>
+
+                <div className="upi-flow-arrow">
+                  <div className="upi-flow-amount">{currencySymbol}{convertFromBase(upiPayModal.amount).toFixed(2)}</div>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </div>
+
+                <div className="upi-flow-person">
+                  <div className="upi-flow-avatar">
+                    {getMemberAvatarUrl(upiPayModal.toMember) ? (
+                      <img className="upi-flow-avatar-img" src={getMemberAvatarUrl(upiPayModal.toMember)!} alt={upiPayModal.toMember.name} />
+                    ) : (
+                      initial(upiPayModal.toMember.name)
+                    )}
+                  </div>
+                  <div className="upi-flow-name">{upiPayModal.toMember.name}</div>
+                </div>
+              </div>
+
+              {upiPayModal.toMember.upi_id ? (
+                <div className="upi-actions">
+                  <div className="upi-id-display">
+                    <span className="upi-id-label">Pay to UPI ID</span>
+                    <code className="upi-id-value">{upiPayModal.toMember.upi_id}</code>
+                    <button
+                      className="btn-copy"
+                      onClick={() => {
+                        navigator.clipboard.writeText(upiPayModal.toMember!.upi_id!);
+                        setUpiCopied(true);
+                        setTimeout(() => setUpiCopied(false), 2000);
+                      }}
+                    >
+                      {upiCopied ? "✓ Copied" : "Copy"}
+                    </button>
+                  </div>
+
+                  <button className="btn btn-upi-launch" onClick={launchUpiApp}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                    Open UPI App
+                  </button>
+                  <div className="upi-hint">Opens your default UPI app (GPay, PhonePe, Paytm, etc.) on mobile</div>
+
+                  <div className="upi-divider"><span>after payment</span></div>
+
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: "100%" }}
+                    onClick={() => {
+                      // Record the settlement in the app
+                      if (upiPayModal.fromMember && upiPayModal.toMember) {
+                        setSettleState({
+                          ...settleState,
+                          [upiPayModal.fromMember.id]: {
+                            toId: upiPayModal.toMember.id,
+                            amount: convertFromBase(upiPayModal.amount).toFixed(2),
+                          },
+                        });
+                      }
+                      setUpiPayModal(null);
+                    }}
+                  >
+                    Mark as Paid
+                  </button>
+                </div>
+              ) : (
+                <div className="upi-no-id">
+                  <div className="upi-no-id-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  </div>
+                  <div className="upi-no-id-text">
+                    <strong>{upiPayModal.toMember.name}</strong> hasn't added their UPI ID yet.
+                    Ask them to add it from their member profile.
+                  </div>
+                  <div className="upi-divider"><span>or settle manually</span></div>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ width: "100%" }}
+                    onClick={() => {
+                      if (upiPayModal.fromMember && upiPayModal.toMember) {
+                        setSettleState({
+                          ...settleState,
+                          [upiPayModal.fromMember.id]: {
+                            toId: upiPayModal.toMember.id,
+                            amount: convertFromBase(upiPayModal.amount).toFixed(2),
+                          },
+                        });
+                      }
+                      setUpiPayModal(null);
+                    }}
+                  >
+                    Record Settlement Manually
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
