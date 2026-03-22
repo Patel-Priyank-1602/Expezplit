@@ -2423,3 +2423,357 @@ p  { color: var(--text-secondary); line-height: 1.65; }
     padding: 12px 16px;
   }
 }
+
+/* ══════════════════════════
+   QR Code Invite Feature
+   ══════════════════════════ */
+
+/* ── QR Toggle Button ── */
+.btn-qr {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-qr:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+.btn-qr.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── QR Panel ── */
+.qr-panel {
+  animation: qrSlideIn 0.3s ease-out;
+  margin-bottom: 8px;
+}
+
+@keyframes qrSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 300px;
+  }
+}
+
+.qr-card {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 24px;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+}
+
+.qr-code-wrap {
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  line-height: 0;
+}
+
+.qr-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.qr-info-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.qr-info-title strong {
+  color: var(--accent);
+}
+
+.qr-info-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.qr-code-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.qr-code-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.qr-code-text .qr-code-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+  font-family: monospace;
+}
+
+/* ── QR Mobile Responsive ── */
+@media (max-width: 640px) {
+  .qr-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    padding: 18px;
+  }
+
+  .qr-info {
+    align-items: center;
+  }
+
+  .qr-code-text {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .qr-code-wrap svg {
+    width: 140px;
+    height: 140px;
+  }
+
+  .invite-code-inline {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+/* ══════════════════════════
+   QR Scanner Feature
+   ══════════════════════════ */
+
+/* ── Scan Button ── */
+.btn-scan {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  transition: all var(--transition);
+}
+
+.btn-scan:hover {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(124, 92, 252, 0.3);
+}
+
+/* ── Scanner Modal ── */
+.scanner-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.scanner-modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 420px;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.scanner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.scanner-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.scanner-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ── Scanner Viewport ── */
+.scanner-viewport {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.scanner-viewport > div:first-child {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.scanner-viewport video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 12px;
+}
+
+/* ── Scanner Frame Overlay ── */
+.scanner-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.scanner-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: var(--accent);
+  border-style: solid;
+  border-width: 0;
+}
+
+.scanner-corner.tl {
+  top: 20%;
+  left: 20%;
+  border-top-width: 3px;
+  border-left-width: 3px;
+  border-top-left-radius: 8px;
+}
+
+.scanner-corner.tr {
+  top: 20%;
+  right: 20%;
+  border-top-width: 3px;
+  border-right-width: 3px;
+  border-top-right-radius: 8px;
+}
+
+.scanner-corner.bl {
+  bottom: 20%;
+  left: 20%;
+  border-bottom-width: 3px;
+  border-left-width: 3px;
+  border-bottom-left-radius: 8px;
+}
+
+.scanner-corner.br {
+  bottom: 20%;
+  right: 20%;
+  border-bottom-width: 3px;
+  border-right-width: 3px;
+  border-bottom-right-radius: 8px;
+}
+
+/* Scanning animation line */
+.scanner-frame::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scanLine 2s ease-in-out infinite;
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+@keyframes scanLine {
+  0%, 100% { top: 22%; }
+  50% { top: 75%; }
+}
+
+/* ── Scanner Error ── */
+.scanner-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--red-subtle);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  color: var(--red);
+  font-size: 13px;
+  line-height: 1.4;
+  width: 100%;
+  max-width: 320px;
+}
+
+.scanner-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Scanner Mobile ── */
+@media (max-width: 480px) {
+  .scanner-modal-backdrop {
+    padding: 10px;
+  }
+
+  .scanner-modal {
+    border-radius: 12px;
+  }
+
+  .scanner-body {
+    padding: 14px;
+  }
+
+  .scanner-viewport {
+    max-width: 280px;
+  }
+}

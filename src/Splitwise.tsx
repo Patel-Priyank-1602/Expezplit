@@ -4,6 +4,8 @@ import { format, parseISO } from "date-fns";
 import { supabase } from "./lib/supabase";
 import { createExpenseNotifications, settleNotification } from "./Notifications";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { QRCodeSVG } from "qrcode.react";
+import { Html5Qrcode } from "html5-qrcode";
 
 const COLORS = ["#7C5CFC", "#22C55E", "#F59E0B", "#EF4444", "#3B82F6", "#8B5CF6"];
 
@@ -166,6 +168,11 @@ export function Splitwise() {
   const [upiCopied, setUpiCopied] = useState(false);
   const [editingMyUpi, setEditingMyUpi] = useState(false);
   const [myUpiInput, setMyUpiInput] = useState("");
+  const [showQr, setShowQr] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerContainerId = "qr-scanner-container";
 
   const hasSelectedRate = currencyCode === BASE_CURRENCY || (conversionRates[currencyCode] ?? 0) > 0;
   const activeCurrencyCode: CurrencyCode = hasSelectedRate ? currencyCode : BASE_CURRENCY;
@@ -512,6 +519,22 @@ export function Splitwise() {
     setGroupName("");
   };
 
+  /* ─── Auto-join from URL (Google Lens / camera scan) ─── */
+  useEffect(() => {
+    if (!userId || !user) return;
+    const params = new URLSearchParams(window.location.search);
+    const codeFromUrl = params.get("join");
+    if (!codeFromUrl) return;
+
+    // Clear the URL parameter
+    const url = new URL(window.location.href);
+    url.searchParams.delete("join");
+    window.history.replaceState({}, "", url.pathname + url.search);
+
+    // Auto-fill the join code
+    setJoinCode(codeFromUrl);
+  }, [userId, user]);
+
   /* ─── Select group ─── */
   const selectGroup = (gid: string) => {
     const g = groups.find((x) => x.id === gid) ?? null;
@@ -701,6 +724,81 @@ export function Splitwise() {
     const upiUrl = `upi://pay?pa=${encodeURIComponent(payeeUpi)}&pn=${encodeURIComponent(payeeName)}&am=${amtDisplay}&cu=INR&tn=${encodeURIComponent(`ExpSplit payment to ${payeeName}`)}`;
     window.location.href = upiUrl;
   };
+
+  /* ─── QR Scanner ─── */
+  const startScanner = async () => {
+    setShowScanner(true);
+    setScannerError(null);
+
+    // Wait for the container to mount
+    await new Promise((r) => setTimeout(r, 300));
+
+    try {
+      const scanner = new Html5Qrcode(scannerContainerId);
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1,
+        },
+        (decodedText) => {
+          // Extract invite code from URL or raw text
+          let code = decodedText.trim();
+          try {
+            const url = new URL(decodedText);
+            const joinParam = url.searchParams.get("join");
+            if (joinParam) code = joinParam;
+          } catch {
+            // Not a URL, use raw text as invite code
+          }
+
+          // Stop scanner and fill the code
+          scanner.stop().then(() => {
+            scannerRef.current = null;
+            setShowScanner(false);
+            setJoinCode(code);
+            setJoinError(null);
+          }).catch(console.error);
+        },
+        () => {
+          // QR code not found in frame - ignore
+        }
+      );
+    } catch (err: any) {
+      console.error("Scanner error:", err);
+      setScannerError(
+        err?.message?.includes("Permission")
+          ? "Camera permission denied. Please allow camera access and try again."
+          : "Could not start camera. Make sure no other app is using it."
+      );
+    }
+  };
+
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+      } catch {
+        // Already stopped
+      }
+      scannerRef.current = null;
+    }
+    setShowScanner(false);
+    setScannerError(null);
+  };
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current = null;
+      }
+    };
+  }, []);
 
   /* ─── Generate invite code for existing groups without one ─── */
   const handleGenerateInviteCode = async (group: Group) => {
@@ -1021,6 +1119,7 @@ export function Splitwise() {
         <div className="card">
           <div className="card-title" style={{ marginBottom: 14 }}>Join a group</div>
           {!showJoinUpiStep ? (
+            <>
             <form onSubmit={handleJoinGroup}>
               <div className="form-row">
                 <div className="field">
@@ -1036,13 +1135,61 @@ export function Splitwise() {
                 </div>
                 <div className="field" style={{ flex: "0 0 auto" }}>
                   <label className="field-label hidden-mobile">&nbsp;</label>
-                  <button type="submit" className="btn btn-secondary" disabled={joinLoading || !joinCode.trim()}>
-                    {joinLoading ? "Joining..." : "Join"}
-                  </button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button type="submit" className="btn btn-secondary" disabled={joinLoading || !joinCode.trim()}>
+                      {joinLoading ? "Joining..." : "Join"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-scan"
+                      onClick={startScanner}
+                      title="Scan QR Code"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+                        <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                        <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+                        <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                        <rect x="7" y="7" width="10" height="10" rx="1"/>
+                      </svg>
+                      Scan
+                    </button>
+                  </div>
                 </div>
               </div>
               {joinError && <div style={{ marginTop: 8, fontSize: 13, color: "var(--red, #ef4444)" }}>{joinError}</div>}
             </form>
+
+            {/* QR Scanner Modal */}
+            {showScanner && (
+              <div className="scanner-modal-backdrop" onClick={stopScanner}>
+                <div className="scanner-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="scanner-header">
+                    <div className="scanner-title">Scan QR Code</div>
+                    <button className="btn btn-secondary btn-sm" onClick={stopScanner}>Close</button>
+                  </div>
+                  <div className="scanner-body">
+                    <div className="scanner-viewport">
+                      <div id={scannerContainerId}></div>
+                      <div className="scanner-frame">
+                        <div className="scanner-corner tl"/>
+                        <div className="scanner-corner tr"/>
+                        <div className="scanner-corner bl"/>
+                        <div className="scanner-corner br"/>
+                      </div>
+                    </div>
+                    {scannerError && (
+                      <div className="scanner-error">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                        {scannerError}
+                      </div>
+                    )}
+                    <div className="scanner-hint">Point your camera at a group QR code</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            </>
           ) : (
             <div className="upi-join-step">
               <div style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 12 }}>
@@ -1160,6 +1307,21 @@ export function Splitwise() {
                   >
                     {copiedCode ? "✓ Copied" : "Copy"}
                   </button>
+                  <button
+                    type="button"
+                    className={showQr ? "btn-qr active" : "btn-qr"}
+                    onClick={() => setShowQr((v) => !v)}
+                    title={showQr ? "Hide QR Code" : "Show QR Code"}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="2" width="8" height="8" rx="1"/>
+                      <rect x="14" y="2" width="8" height="8" rx="1"/>
+                      <rect x="2" y="14" width="8" height="8" rx="1"/>
+                      <rect x="14" y="14" width="4" height="4" rx="0.5"/>
+                      <path d="M22 14h-2v4h-4v4h4a2 2 0 0 0 2-2v-4z"/>
+                    </svg>
+                    {showQr ? "Hide QR" : "QR Code"}
+                  </button>
                 </div>
               ) : isAdmin(currentGroup) ? (
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleGenerateInviteCode(currentGroup)}>
@@ -1191,6 +1353,32 @@ export function Splitwise() {
               )}
             </div>
           </div>
+
+          {/* QR Code Panel */}
+          {showQr && currentGroup.invite_code && (
+            <div className="qr-panel">
+              <div className="qr-card">
+                <div className="qr-code-wrap">
+                  <QRCodeSVG
+                    value={`${window.location.origin}${window.location.pathname}?join=${encodeURIComponent(currentGroup.invite_code)}`}
+                    size={180}
+                    bgColor="#ffffff"
+                    fgColor="#1B1B1F"
+                    level="M"
+                    includeMargin={true}
+                  />
+                </div>
+                <div className="qr-info">
+                  <div className="qr-info-title">Scan to join <strong>{currentGroup.name}</strong></div>
+                  <div className="qr-info-sub">Share this QR code with friends to invite them to the group</div>
+                  <div className="qr-code-text">
+                    <span className="qr-code-label">Code:</span>
+                    <code className="qr-code-value">{currentGroup.invite_code}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="splitwise-currency-row">
             <div style={{ fontSize: 12, color: ratesError ? "var(--red)" : "var(--text-muted)" }}>
