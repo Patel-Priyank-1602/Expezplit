@@ -1358,7 +1358,7 @@ export function Splitwise() {
           {showQr && currentGroup.invite_code && (
             <div className="qr-panel">
               <div className="qr-card">
-                <div className="qr-code-wrap">
+                <div className="qr-code-wrap" id="qr-code-image">
                   <QRCodeSVG
                     value={`${window.location.origin}${window.location.pathname}?join=${encodeURIComponent(currentGroup.invite_code)}`}
                     size={180}
@@ -1374,6 +1374,101 @@ export function Splitwise() {
                   <div className="qr-code-text">
                     <span className="qr-code-label">Code:</span>
                     <code className="qr-code-value">{currentGroup.invite_code}</code>
+                  </div>
+                  <div className="qr-share-actions">
+                    <button
+                      type="button"
+                      className="btn btn-qr-share"
+                      onClick={async () => {
+                        const joinUrl = `${window.location.origin}${window.location.pathname}?join=${encodeURIComponent(currentGroup.invite_code!)}`;
+                        // Try to share QR as image
+                        try {
+                          const svgEl = document.querySelector("#qr-code-image svg") as SVGElement;
+                          if (svgEl) {
+                            const canvas = document.createElement("canvas");
+                            canvas.width = 400; canvas.height = 400;
+                            const ctx = canvas.getContext("2d")!;
+                            const svgData = new XMLSerializer().serializeToString(svgEl);
+                            const img = new Image();
+                            img.onload = async () => {
+                              ctx.fillStyle = "#ffffff";
+                              ctx.fillRect(0, 0, 400, 400);
+                              ctx.drawImage(img, 0, 0, 400, 400);
+                              canvas.toBlob(async (blob) => {
+                                if (blob && navigator.share) {
+                                  const file = new File([blob], `${currentGroup.name}-invite-qr.png`, { type: "image/png" });
+                                  try {
+                                    await navigator.share({
+                                      title: `Join ${currentGroup.name} on ExpeZplit`,
+                                      text: `Join my group "${currentGroup.name}" on ExpeZplit!\nInvite code: ${currentGroup.invite_code}\nOr open this link:`,
+                                      url: joinUrl,
+                                      files: [file],
+                                    });
+                                  } catch {
+                                    // User cancelled share or files not supported, try without file
+                                    try {
+                                      await navigator.share({
+                                        title: `Join ${currentGroup.name} on ExpeZplit`,
+                                        text: `Join my group "${currentGroup.name}" on ExpeZplit!\nInvite code: ${currentGroup.invite_code}\nOr open this link: ${joinUrl}`,
+                                      });
+                                    } catch { /* cancelled */ }
+                                  }
+                                } else if (navigator.share) {
+                                  await navigator.share({
+                                    title: `Join ${currentGroup.name} on ExpeZplit`,
+                                    text: `Join my group "${currentGroup.name}" on ExpeZplit!\nInvite code: ${currentGroup.invite_code}\nOr open this link: ${joinUrl}`,
+                                  });
+                                } else {
+                                  navigator.clipboard.writeText(`Join my group "${currentGroup.name}" on ExpeZplit!\nInvite code: ${currentGroup.invite_code}\nLink: ${joinUrl}`);
+                                  alert("Invite link copied to clipboard!");
+                                }
+                              }, "image/png");
+                            };
+                            img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+                          }
+                        } catch {
+                          // Fallback: share text only
+                          if (navigator.share) {
+                            navigator.share({
+                              title: `Join ${currentGroup.name}`,
+                              text: `Join my group "${currentGroup.name}" on ExpeZplit!\nInvite code: ${currentGroup.invite_code}\nLink: ${joinUrl}`,
+                            }).catch(() => {});
+                          } else {
+                            navigator.clipboard.writeText(`Join my group "${currentGroup.name}" on ExpeZplit!\nInvite code: ${currentGroup.invite_code}\nLink: ${joinUrl}`);
+                            alert("Invite link copied to clipboard!");
+                          }
+                        }
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                      Share
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-qr-download"
+                      onClick={() => {
+                        const svgEl = document.querySelector("#qr-code-image svg") as SVGElement;
+                        if (!svgEl) return;
+                        const canvas = document.createElement("canvas");
+                        canvas.width = 400; canvas.height = 400;
+                        const ctx = canvas.getContext("2d")!;
+                        const svgData = new XMLSerializer().serializeToString(svgEl);
+                        const img = new Image();
+                        img.onload = () => {
+                          ctx.fillStyle = "#ffffff";
+                          ctx.fillRect(0, 0, 400, 400);
+                          ctx.drawImage(img, 0, 0, 400, 400);
+                          const a = document.createElement("a");
+                          a.download = `${currentGroup.name}-invite-qr.png`;
+                          a.href = canvas.toDataURL("image/png");
+                          a.click();
+                        };
+                        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Download
+                    </button>
                   </div>
                 </div>
               </div>

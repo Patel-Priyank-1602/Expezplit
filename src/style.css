@@ -2572,6 +2572,56 @@ p  { color: var(--text-secondary); line-height: 1.65; }
   }
 }
 
+/* ── QR Share Actions ── */
+.qr-share-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-qr-share,
+.btn-qr-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-qr-share {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(124, 92, 252, 0.3);
+}
+
+.btn-qr-share:hover {
+  box-shadow: 0 4px 14px rgba(124, 92, 252, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-qr-download {
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-qr-download:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+@media (max-width: 640px) {
+  .qr-share-actions {
+    justify-content: center;
+  }
+}
+
 /* ══════════════════════════
    QR Scanner Feature
    ══════════════════════════ */
