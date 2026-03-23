@@ -166,16 +166,17 @@ function App() {
   };
 
   const downloadSplitwiseCsv = async (userId: string, stamp: string) => {
-    const { data: groupsData, error: groupsError } = await supabase
+    // 1. Fetch groups owned by this user
+    const { data: ownedGroupsData, error: ownedGroupsError } = await supabase
       .from("groups")
       .select("id,name,currency")
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
 
-    let resolvedGroupsData = groupsData as GroupCsvRow[] | null;
-    if (groupsError) {
-      if (!isMissingCurrencyColumnError(groupsError.message)) {
-        throw new Error(`Failed to export splitwise groups: ${groupsError.message}`);
+    let resolvedOwnedGroups = ownedGroupsData as GroupCsvRow[] | null;
+    if (ownedGroupsError) {
+      if (!isMissingCurrencyColumnError(ownedGroupsError.message)) {
+        throw new Error(`Failed to export splitwise groups: ${ownedGroupsError.message}`);
       }
 
       const retry = await supabase
@@ -188,10 +189,57 @@ function App() {
         throw new Error(`Failed to export splitwise groups: ${retry.error.message}`);
       }
 
-      resolvedGroupsData = (retry.data ?? []) as GroupCsvRow[];
+      resolvedOwnedGroups = (retry.data ?? []) as GroupCsvRow[];
     }
 
-    const groups = (resolvedGroupsData ?? []) as GroupCsvRow[];
+    const ownedGroups = (resolvedOwnedGroups ?? []) as GroupCsvRow[];
+
+    // 2. Fetch groups the user has joined via invite code (by email match in group_members)
+    let joinedGroups: GroupCsvRow[] = [];
+    const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
+    if (userEmail) {
+      const { data: membershipRows } = await supabase
+        .from("group_members")
+        .select("group_id")
+        .eq("email", userEmail);
+
+      const ownedIds = new Set(ownedGroups.map((g) => g.id));
+      const joinedIds = (membershipRows ?? [])
+        .map((m: { group_id: string }) => m.group_id)
+        .filter((id: string) => !ownedIds.has(id));
+
+      if (joinedIds.length > 0) {
+        const { data: jData, error: jError } = await supabase
+          .from("groups")
+          .select("id,name,currency")
+          .in("id", joinedIds)
+          .order("created_at", { ascending: true });
+
+        let resolvedJoined = jData as GroupCsvRow[] | null;
+        if (jError) {
+          if (!isMissingCurrencyColumnError(jError.message)) {
+            throw new Error(`Failed to export joined splitwise groups: ${jError.message}`);
+          }
+
+          const retryJ = await supabase
+            .from("groups")
+            .select("id,name")
+            .in("id", joinedIds)
+            .order("created_at", { ascending: true });
+
+          if (retryJ.error) {
+            throw new Error(`Failed to export joined splitwise groups: ${retryJ.error.message}`);
+          }
+
+          resolvedJoined = (retryJ.data ?? []) as GroupCsvRow[];
+        }
+
+        joinedGroups = (resolvedJoined ?? []) as GroupCsvRow[];
+      }
+    }
+
+    // 3. Merge owned + joined groups
+    const groups = [...ownedGroups, ...joinedGroups];
     if (groups.length === 0) {
       const emptyCsv = rowsToCsv(
         [
