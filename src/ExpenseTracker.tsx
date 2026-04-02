@@ -12,6 +12,8 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  BarChart,
+  Bar,
 } from "recharts";
 import { format, isSameMonth, isSameYear, parseISO, subDays, addDays, differenceInDays } from "date-fns";
 import { supabase } from "./lib/supabase";
@@ -23,8 +25,6 @@ type Expense = {
   amount: number;
   created_at: string;
 };
-
-type RangeFilter = "month" | "year" | "all";
 
 type CurrencyCode = string;
 
@@ -112,10 +112,14 @@ export function ExpenseTracker() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
-  const [range, setRange] = useState<RangeFilter>("month");
   const [lineRange, setLineRange] = useState<number | "all">(7);
   const [lineType, setLineType] = useState<"daily" | "cumulative">("daily");
   const [lineView, setLineView] = useState<"all" | "category">("all");
+  const [selectedPieMonth, setSelectedPieMonth] = useState<string>("month");
+  const [selectedStatsMonth, setSelectedStatsMonth] = useState<string>("month");
+  const [barRange, setBarRange] = useState<number | "all">(7);
+  const [barType, setBarType] = useState<"daily" | "cumulative">("daily");
+  const [barView, setBarView] = useState<"all" | "category">("all");
   const [loading, setLoading] = useState(true);
   const [currencyCode, setCurrencyCode] = useState<CurrencyCode>(() => {
     const savedCode = localStorage.getItem("app_currency_code")?.toUpperCase();
@@ -136,9 +140,13 @@ export function ExpenseTracker() {
   const [isTopExpensesOpen, setIsTopExpensesOpen] = useState(false);
   const [isRecentExpensesOpen, setIsRecentExpensesOpen] = useState(false);
   const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isStatsMonthDropdownOpen, setIsStatsMonthDropdownOpen] = useState(false);
   const [currencySearch, setCurrencySearch] = useState("");
   const currencyMenuRef = useRef<HTMLDivElement | null>(null);
   const currencySearchInputRef = useRef<HTMLInputElement | null>(null);
+  const monthDropdownRef = useRef<HTMLDivElement | null>(null);
+  const statsMonthDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const hasSelectedRate = currencyCode === BASE_CURRENCY || (conversionRates[currencyCode] ?? 0) > 0;
   const activeCurrencyCode: CurrencyCode = hasSelectedRate ? currencyCode : BASE_CURRENCY;
@@ -207,10 +215,20 @@ export function ExpenseTracker() {
       if (!currencyMenuRef.current.contains(event.target as Node)) {
         setIsCurrencyMenuOpen(false);
       }
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target as Node)) {
+        setIsMonthDropdownOpen(false);
+      }
+      if (statsMonthDropdownRef.current && !statsMonthDropdownRef.current.contains(event.target as Node)) {
+        setIsStatsMonthDropdownOpen(false);
+      }
     };
 
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsCurrencyMenuOpen(false);
+      if (event.key === "Escape") {
+        setIsCurrencyMenuOpen(false);
+        setIsMonthDropdownOpen(false);
+        setIsStatsMonthDropdownOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", onPointerDown);
@@ -342,20 +360,83 @@ export function ExpenseTracker() {
     setExpenses((p) => p.filter((e) => e.id !== id));
   };
 
-  /* Filter */
+  /* Available months for pie chart selector */
+  const availableMonths = useMemo(() => {
+    const monthSet = new Map<string, { label: string; year: number; month: number }>();
+    expenses.forEach((e) => {
+      const d = parseISO(e.created_at);
+      const key = format(d, "yyyy-MM");
+      if (!monthSet.has(key)) {
+        monthSet.set(key, {
+          label: format(d, "MMMM yyyy"),
+          year: d.getFullYear(),
+          month: d.getMonth(),
+        });
+      }
+    });
+    return Array.from(monthSet.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([key, meta]) => ({ key, ...meta }));
+  }, [expenses]);
+
+  /* Filter for pie chart based on selected mode */
   const filtered = useMemo(() => {
     const now = new Date();
+    if (selectedPieMonth === "month") {
+      return expenses.filter((e) => {
+        const d = parseISO(e.created_at);
+        return isSameMonth(d, now) && isSameYear(d, now);
+      });
+    }
+    if (selectedPieMonth === "year") {
+      return expenses.filter((e) => {
+        const d = parseISO(e.created_at);
+        return isSameYear(d, now);
+      });
+    }
+    if (selectedPieMonth === "all") {
+      return expenses;
+    }
+    // Specific month key like "2026-03"
     return expenses.filter((e) => {
       const d = parseISO(e.created_at);
-      if (range === "month") return isSameMonth(d, now) && isSameYear(d, now);
-      if (range === "year") return isSameYear(d, now);
-      return true;
+      return format(d, "yyyy-MM") === selectedPieMonth;
     });
-  }, [expenses, range]);
+  }, [expenses, selectedPieMonth]);
 
   const convertedFiltered = useMemo(
     () => filtered.map((entry) => ({ ...entry, amount: convertFromBase(entry.amount) })),
     [filtered, convertFromBase],
+  );
+
+  /* Filter for stats based on selected mode */
+  const statsFiltered = useMemo(() => {
+    const now = new Date();
+    if (selectedStatsMonth === "month") {
+      return expenses.filter((e) => {
+        const d = parseISO(e.created_at);
+        return isSameMonth(d, now) && isSameYear(d, now);
+      });
+    }
+    if (selectedStatsMonth === "year") {
+      return expenses.filter((e) => {
+        const d = parseISO(e.created_at);
+        return isSameYear(d, now);
+      });
+    }
+    if (selectedStatsMonth === "all") {
+      return expenses;
+    }
+    // Specific month key like "2026-03"
+    return expenses.filter((e) => {
+      const d = parseISO(e.created_at);
+      return format(d, "yyyy-MM") === selectedStatsMonth;
+    });
+  }, [expenses, selectedStatsMonth]);
+
+  const convertedStatsFiltered = useMemo(
+    () => statsFiltered.map((entry) => ({ ...entry, amount: convertFromBase(entry.amount) })),
+    [statsFiltered, convertFromBase],
   );
 
   const allExpensesByAmount = useMemo(
@@ -388,8 +469,8 @@ export function ExpenseTracker() {
     [recentExpenses],
   );
 
-  const totalSpent = useMemo(() => convertedFiltered.reduce((s, e) => s + e.amount, 0), [convertedFiltered]);
-  const catCount = useMemo(() => new Set(convertedFiltered.map((e) => e.category)).size, [convertedFiltered]);
+  const totalSpent = useMemo(() => convertedStatsFiltered.reduce((s, e) => s + e.amount, 0), [convertedStatsFiltered]);
+  const catCount = useMemo(() => new Set(convertedStatsFiltered.map((e) => e.category)).size, [convertedStatsFiltered]);
 
   const categoryColorMap = useMemo(() => {
     const uniqueCategories = Array.from(new Set(expenses.map((e) => e.category.trim()).filter(Boolean))).sort((a, b) =>
@@ -429,6 +510,87 @@ export function ExpenseTracker() {
       color: getCategoryColor(cat),
     }));
   }, [convertedFiltered, getCategoryColor]);
+
+  /* Bar chart data — time-series like the line chart but for bar chart */
+  const { barChartData, barCategoryData, barCategorySeries } = useMemo(() => {
+    const now = new Date();
+    const map = new Map<string, { total: number; categories: Record<string, number> }>();
+
+    if (barRange !== "all") {
+      for (let i = (barRange as number) - 1; i >= 0; i--) {
+        map.set(format(subDays(now, i), "yyyy-MM-dd"), { total: 0, categories: {} });
+      }
+    }
+
+    const start = barRange === "all"
+      ? (expenses.length ? new Date(Math.min(...expenses.map(e => parseISO(e.created_at).getTime()))) : now)
+      : subDays(now, (barRange as number) - 1);
+
+    expenses.forEach((e) => {
+      const d = parseISO(e.created_at);
+      const k = format(d, "yyyy-MM-dd");
+      const convertedAmount = convertFromBase(e.amount);
+
+      if (barRange !== "all") {
+        if (d >= start && map.has(k)) {
+          const current = map.get(k)!;
+          current.total += convertedAmount;
+          current.categories[e.category] = (current.categories[e.category] ?? 0) + convertedAmount;
+          map.set(k, current);
+        }
+      } else {
+        const current = map.get(k) ?? { total: 0, categories: {} };
+        current.total += convertedAmount;
+        current.categories[e.category] = (current.categories[e.category] ?? 0) + convertedAmount;
+        map.set(k, current);
+      }
+    });
+
+    const sorted = Array.from(map.entries())
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([date, values]) => ({ date, total: values.total, categories: values.categories }));
+
+    const catNames = Array.from(new Set(sorted.flatMap((entry) => Object.keys(entry.categories))));
+    const catSeriesMeta = catNames.map((name, index) => ({
+      key: `bcat_${index}`,
+      name,
+      color: getCategoryColor(name),
+    }));
+
+    const createRow = (entry: { date: string; total: number; categories: Record<string, number> }) => {
+      const row: Record<string, number | string> = { date: entry.date, total: entry.total };
+      catSeriesMeta.forEach((s) => { row[s.key] = entry.categories[s.name] ?? 0; });
+      return row;
+    };
+
+    if (barType === "cumulative") {
+      let acc = 0;
+      const accByCat: Record<string, number> = {};
+      catSeriesMeta.forEach((s) => { accByCat[s.key] = 0; });
+
+      const cumRows: Record<string, number | string>[] = sorted.map((entry) => {
+        acc += entry.total;
+        const baseRow = createRow(entry);
+        catSeriesMeta.forEach((s) => {
+          accByCat[s.key] += Number(baseRow[s.key] ?? 0);
+          baseRow[s.key] = accByCat[s.key];
+        });
+        return { ...baseRow, total: acc };
+      });
+
+      return {
+        barChartData: cumRows.map((row) => ({ date: String(row["date"]), total: Number(row["total"]) })),
+        barCategoryData: cumRows,
+        barCategorySeries: catSeriesMeta,
+      };
+    }
+
+    return {
+      barChartData: sorted.map((entry) => ({ date: entry.date, total: entry.total })),
+      barCategoryData: sorted.map((entry) => createRow(entry)),
+      barCategorySeries: catSeriesMeta,
+    };
+  }, [expenses, barRange, barType, convertFromBase, getCategoryColor]);
 
   /* Line data */
   const { lineData, categoryLineData, categorySeries } = useMemo(() => {
@@ -602,10 +764,13 @@ export function ExpenseTracker() {
     return "rgba(124, 92, 252, 1)";
   };
 
-  const ranges: { key: RangeFilter; label: string }[] = [
-    { key: "month", label: "This month" },
-    { key: "year", label: "This year" },
-    { key: "all", label: "All time" },
+  const barRanges: { key: number | "all"; label: string }[] = [
+    { key: 7, label: "7D" },
+    { key: 14, label: "14D" },
+    { key: 28, label: "28D" },
+    { key: 90, label: "90D" },
+    { key: 365, label: "365D" },
+    { key: "all", label: "All" },
   ];
 
   const empty = (msg: string) => (
@@ -737,6 +902,50 @@ export function ExpenseTracker() {
         </div>
       </div>
 
+      {/* Stats Filter Row */}
+      <div className="pie-filter-row" style={{ marginTop: 20, marginBottom: 8 }}>
+        <div className="filter-pills">
+          <button className={selectedStatsMonth === "month" ? "pill active" : "pill"} onClick={() => { setSelectedStatsMonth("month"); setSelectedPieMonth("month"); }}>This month</button>
+          <button className={selectedStatsMonth === "year" ? "pill active" : "pill"} onClick={() => { setSelectedStatsMonth("year"); setSelectedPieMonth("year"); }}>This year</button>
+          <button className={selectedStatsMonth === "all" ? "pill active" : "pill"} onClick={() => { setSelectedStatsMonth("all"); setSelectedPieMonth("all"); }}>All time</button>
+        </div>
+        {/* Custom month dropdown for stats */}
+        {availableMonths.length > 0 && (
+          <div className="month-dropdown" style={{ flex: 'none' }} ref={statsMonthDropdownRef}>
+            <button
+              type="button"
+              className={`month-dropdown-trigger ${!["month", "year", "all"].includes(selectedStatsMonth) ? "has-value" : ""}`}
+              onClick={() => setIsStatsMonthDropdownOpen((p) => !p)}
+            >
+              <span className="month-dropdown-text">
+                {!["month", "year", "all"].includes(selectedStatsMonth)
+                  ? availableMonths.find((m) => m.key === selectedStatsMonth)?.label ?? "Select month"
+                  : "Select month"}
+              </span>
+              <span className="month-dropdown-arrow">{isStatsMonthDropdownOpen ? "▴" : "▾"}</span>
+            </button>
+            {isStatsMonthDropdownOpen && (
+              <div className="month-dropdown-menu">
+                {availableMonths.map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    className={`month-dropdown-option ${selectedStatsMonth === m.key ? "active" : ""}`}
+                    onClick={() => {
+                      setSelectedStatsMonth(m.key);
+                      setSelectedPieMonth(m.key);
+                      setIsStatsMonthDropdownOpen(false);
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Stats */}
       <div className="stats-row">
         <div className="stat">
@@ -745,7 +954,7 @@ export function ExpenseTracker() {
         </div>
         <div className="stat">
           <div className="stat-label">Expenses</div>
-          <div className="stat-val green">{filtered.length}</div>
+          <div className="stat-val green">{statsFiltered.length}</div>
         </div>
         <div className="stat">
           <div className="stat-label">Categories</div>
@@ -753,30 +962,88 @@ export function ExpenseTracker() {
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="charts-row">
-        {/* Pie */}
-        <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+      {/* Top Row: Add Form (LEFT) + Pie Chart (RIGHT) */}
+      <div className="charts-top-row">
+        {/* Add expense form */}
+        <div className="card add-expense-card">
+          <div className="add-expense-header">
+            <span className="add-expense-icon">＋</span>
+            <div className="card-title">Add new expense</div>
+          </div>
+          <form onSubmit={handleAdd} className="add-expense-form">
+            <div className="field">
+              <label className="field-label">Name</label>
+              <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Dinner, Uber, Groceries..." />
+            </div>
+            <div className="field">
+              <label className="field-label">Category</label>
+              <input className="field-input" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Food, Travel, Rent..." />
+            </div>
+            <div className="field">
+              <label className="field-label">Amount ({activeCurrencyCode})</label>
+              <input className="field-input" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+            </div>
+            <button type="submit" className="btn btn-primary add-expense-btn">Add Expense</button>
+          </form>
+        </div>
+
+        {/* Pie Chart with 4-mode filter */}
+        <div className="card charts-pie-card">
           <div className="card-head">
             <div>
               <div className="card-title">Spending by category</div>
               <div className="card-sub">Category-wise breakdown</div>
             </div>
-            <div className="filter-pills">
-              {ranges.map((r) => (
-                <button key={r.key} className={range === r.key ? "pill active" : "pill"} onClick={() => setRange(r.key)}>
-                  {r.label}
-                </button>
-              ))}
-            </div>
           </div>
-          <div className="chart-area" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 260 }}>
+          {/* Pie filter: 4 modes */}
+          <div className="pie-filter-row">
+            <div className="filter-pills">
+              <button className={selectedPieMonth === "month" ? "pill active" : "pill"} onClick={() => setSelectedPieMonth("month")}>This month</button>
+              <button className={selectedPieMonth === "year" ? "pill active" : "pill"} onClick={() => setSelectedPieMonth("year")}>This year</button>
+              <button className={selectedPieMonth === "all" ? "pill active" : "pill"} onClick={() => setSelectedPieMonth("all")}>All time</button>
+            </div>
+            {/* Custom month dropdown */}
+            {availableMonths.length > 0 && (
+              <div className="month-dropdown" ref={monthDropdownRef}>
+                <button
+                  type="button"
+                  className={`month-dropdown-trigger ${!["month", "year", "all"].includes(selectedPieMonth) ? "has-value" : ""}`}
+                  onClick={() => setIsMonthDropdownOpen((p) => !p)}
+                >
+                  <span className="month-dropdown-text">
+                    {!["month", "year", "all"].includes(selectedPieMonth)
+                      ? availableMonths.find((m) => m.key === selectedPieMonth)?.label ?? "Select month"
+                      : "Select month"}
+                  </span>
+                  <span className="month-dropdown-arrow">{isMonthDropdownOpen ? "▴" : "▾"}</span>
+                </button>
+                {isMonthDropdownOpen && (
+                  <div className="month-dropdown-menu">
+                    {availableMonths.map((m) => (
+                      <button
+                        key={m.key}
+                        type="button"
+                        className={`month-dropdown-option ${selectedPieMonth === m.key ? "active" : ""}`}
+                        onClick={() => {
+                          setSelectedPieMonth(m.key);
+                          setIsMonthDropdownOpen(false);
+                        }}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="chart-area pie-chart-area">
             {pieData.length === 0
-              ? empty("Add expenses to see the breakdown")
+              ? empty("No expenses for this period")
               : (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie dataKey="value" data={pieData} nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2} strokeWidth={0}>
+                    <Pie dataKey="value" data={pieData} nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={2} strokeWidth={0}>
                       {pieData.map((entry) => (
                         <Cell key={entry.name} fill={entry.color} />
                       ))}
@@ -785,14 +1052,108 @@ export function ExpenseTracker() {
                       contentStyle={{ background: "var(--bg-raised)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
                       formatter={(value: any, _: any, props: any) => [`${currencySymbol}${Number(value).toFixed(2)} (${props.payload.pct}%)`, props.payload.name]}
                     />
-                    <Legend />
+                    <Legend
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               )}
           </div>
         </div>
+      </div>
 
-        {/* Area / Line */}
+      {/* Bar Chart — Full Width */}
+      <div className="charts-bottom-row">
+        <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+          <div className="card-head time-card-head">
+            <div>
+              <div className="card-title">Spending bar chart</div>
+              <div className="card-sub">
+                {barView === "all" ? "Totals for selected range" : "Category breakdown for selected range"}
+              </div>
+            </div>
+            <div className="time-controls">
+              <div className="time-first-row">
+                <div className="time-pills-row">
+                  <div className="filter-pills">
+                    <button className={barView === "all" ? "pill active" : "pill"} onClick={() => setBarView("all")}>All</button>
+                    <button className={barView === "category" ? "pill active" : "pill"} onClick={() => setBarView("category")}>Category</button>
+                  </div>
+                </div>
+                <div className="time-pills-row">
+                  <div className="filter-pills">
+                    <button className={barType === "daily" ? "pill active" : "pill"} onClick={() => setBarType("daily")}>Daily</button>
+                    <button className={barType === "cumulative" ? "pill active" : "pill"} onClick={() => setBarType("cumulative")}>Cumulative</button>
+                  </div>
+                </div>
+              </div>
+              <div className="time-pills-row">
+                <div className="filter-pills">
+                  {barRanges.map((r) => (
+                    <button key={r.key} className={barRange === r.key ? "pill active" : "pill"} onClick={() => setBarRange(r.key)}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="chart-area" style={{ height: 320 }}>
+            {barChartData.length === 0
+              ? empty("Add expenses to see the chart")
+              : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={barView === "all" ? barChartData : barCategoryData}
+                    margin={{ left: 10, right: 10, top: 5, bottom: 5 }}
+                    barGap={0}
+                    barCategoryGap={0}
+                  >
+                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                      axisLine={{ stroke: "var(--border)" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+                      axisLine={{ stroke: "var(--border)" }}
+                      tickLine={false}
+                      tickFormatter={(value: number) => `${currencySymbol}${Math.round(value)}`}
+                    />
+                    <Tooltip
+                      contentStyle={{ background: "var(--bg-raised)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+                      formatter={(value: any, name: any) => [`${currencySymbol}${Number(value).toFixed(2)}`, String(name)]}
+                      cursor={{ fill: "rgba(124, 92, 252, 0.08)" }}
+                    />
+                    <Legend />
+
+                    {barView === "all" ? (
+                      <Bar dataKey="total" name="Total" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    ) : (
+                      barCategorySeries.map((series) => (
+                        <Bar
+                          key={series.key}
+                          dataKey={series.key}
+                          name={series.name}
+                          fill={series.color}
+                          radius={[2, 2, 0, 0]}
+                        />
+                      ))
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+          </div>
+        </div>
+      </div>
+
+      {/* Line Chart — Full Width */}
+      <div className="charts-bottom-row">
         <div className="card" style={{ display: "flex", flexDirection: "column" }}>
           <div className="card-head time-card-head">
             <div>
@@ -829,7 +1190,7 @@ export function ExpenseTracker() {
               </div>
             </div>
           </div>
-          <div className="chart-area">
+          <div className="chart-area" style={{ height: 320 }}>
             {lineData.length === 0
               ? empty("Add expenses to see trends")
               : (
@@ -957,30 +1318,7 @@ export function ExpenseTracker() {
         </div>
       </div>
 
-      {/* Add form */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-title" style={{ marginBottom: 14 }}>Add new expense</div>
-        <form onSubmit={handleAdd}>
-          <div className="form-row">
-            <div className="field">
-              <label className="field-label">Name</label>
-              <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Dinner, Uber, Groceries..." />
-            </div>
-            <div className="field">
-              <label className="field-label">Category</label>
-              <input className="field-input" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Food, Travel, Rent..." />
-            </div>
-            <div className="field">
-              <label className="field-label">Amount ({activeCurrencyCode})</label>
-              <input className="field-input" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
-            </div>
-            <div className="field" style={{ flex: "0 0 auto" }}>
-              <label className="field-label hidden-mobile">&nbsp;</label>
-              <button type="submit" className="btn btn-primary">Add</button>
-            </div>
-          </div>
-        </form>
-      </div>
+
 
       <div className="expenses-overview-grid">
         {/* Top Expenses */}

@@ -119,9 +119,9 @@ export function Splitwise() {
 
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
   const [isDeletingGroups, setIsDeletingGroups] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"your_groups" | "create_join">("your_groups");
 
   const [groupName, setGroupName] = useState("");
 
@@ -152,6 +152,11 @@ export function Splitwise() {
   const [isAllTransactionsOpen, setIsAllTransactionsOpen] = useState(false);
   const currencyMenuRef = useRef<HTMLDivElement | null>(null);
   const currencySearchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [isPaidByMenuOpen, setIsPaidByMenuOpen] = useState(false);
+  const [isSplitTypeMenuOpen, setIsSplitTypeMenuOpen] = useState(false);
+  const paidByMenuRef = useRef<HTMLDivElement | null>(null);
+  const splitTypeMenuRef = useRef<HTMLDivElement | null>(null);
 
   // Join-group & invite-code state
   const [joinCode, setJoinCode] = useState("");
@@ -263,14 +268,23 @@ export function Splitwise() {
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
-      if (!currencyMenuRef.current) return;
-      if (!currencyMenuRef.current.contains(event.target as Node)) {
+      if (currencyMenuRef.current && !currencyMenuRef.current.contains(event.target as Node)) {
         setIsCurrencyMenuOpen(false);
+      }
+      if (paidByMenuRef.current && !paidByMenuRef.current.contains(event.target as Node)) {
+        setIsPaidByMenuOpen(false);
+      }
+      if (splitTypeMenuRef.current && !splitTypeMenuRef.current.contains(event.target as Node)) {
+        setIsSplitTypeMenuOpen(false);
       }
     };
 
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsCurrencyMenuOpen(false);
+      if (event.key === "Escape") {
+         setIsCurrencyMenuOpen(false);
+         setIsPaidByMenuOpen(false);
+         setIsSplitTypeMenuOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", onPointerDown);
@@ -517,6 +531,7 @@ export function Splitwise() {
     setGroups((p) => [...p, newGroup]);
     applyActiveGroup(newGroup);
     setGroupName("");
+    setActiveTab("your_groups");
   };
 
   /* ─── Auto-join from URL (Google Lens / camera scan) ─── */
@@ -541,58 +556,37 @@ export function Splitwise() {
     applyActiveGroup(g);
   };
 
-  const toggleGroupSelection = (gid: string) => {
-    setSelectedGroupIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(gid)) next.delete(gid);
-      else next.add(gid);
-      return next;
-    });
-  };
+  const deleteGroup = async (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    if (!userId || isDeletingGroups) return;
 
-  const deleteSelectedGroups = async () => {
-    if (!userId || selectedGroupIds.size === 0 || isDeletingGroups) return;
-
-    const idsToDelete = Array.from(selectedGroupIds);
-
-    // Only allow deleting groups the current user is admin/owner of
-    const adminIds = idsToDelete.filter((id) => {
-      const g = groups.find((x) => x.id === id);
-      return g ? isAdmin(g) : false;
-    });
-    const skipped = idsToDelete.length - adminIds.length;
-
-    if (adminIds.length === 0) {
-      window.alert("You can only delete groups you created. None of the selected groups belong to you.");
-      return;
+    const g = groups.find((x) => x.id === id);
+    if (!g || !isAdmin(g)) {
+       window.alert("You can only delete groups you created.");
+       return;
     }
 
-    const confirmMsg = skipped > 0
-      ? `Delete ${adminIds.length} group${adminIds.length > 1 ? "s" : ""} you own? (${skipped} joined group${skipped > 1 ? "s" : ""} will be skipped.) This removes all members and expenses.`
-      : `Delete ${adminIds.length} selected group${adminIds.length > 1 ? "s" : ""}? This will also delete all members and expenses in those groups.`;
-
-    if (!window.confirm(confirmMsg)) return;
+    if (!window.confirm(`Delete the group "${name}"? This will also delete all members and expenses.`)) return;
 
     setIsDeletingGroups(true);
 
     const { error } = await supabase
       .from("groups")
       .delete()
-      .eq("user_id", userId)
-      .in("id", adminIds);
+      .eq("id", id)
+      .eq("user_id", userId);
 
     if (error) {
-      console.error("Error deleting groups:", error.message);
-      window.alert("Unable to delete selected groups right now. Please try again.");
+      console.error("Error deleting group:", error.message);
+      window.alert("Unable to delete group right now. Please try again.");
       setIsDeletingGroups(false);
       return;
     }
 
-    const remainingGroups = groups.filter((group) => !adminIds.includes(group.id));
-    const shouldResetActive = !!selectedGroupId && adminIds.includes(selectedGroupId);
+    const remainingGroups = groups.filter((group) => group.id !== id);
+    const shouldResetActive = selectedGroupId === id;
 
     setGroups(remainingGroups);
-    setSelectedGroupIds(new Set());
 
     if (shouldResetActive) {
       applyActiveGroup(remainingGroups[0] ?? null);
@@ -600,13 +594,6 @@ export function Splitwise() {
 
     setIsDeletingGroups(false);
   };
-
-  useEffect(() => {
-    setSelectedGroupIds((prev) => {
-      const ids = new Set(groups.map((group) => group.id));
-      return new Set(Array.from(prev).filter((id) => ids.has(id)));
-    });
-  }, [groups]);
 
   /* ─── Join group by invite code ─── */
   const handleJoinGroup = async (e: React.FormEvent) => {
@@ -679,6 +666,7 @@ export function Splitwise() {
     setShowJoinUpiStep(false);
     setPendingJoinGroupId(null);
     setJoinUpiId("");
+    setActiveTab("your_groups");
   };
 
   /* ─── Update UPI ID for current user in current group ─── */
@@ -1098,9 +1086,81 @@ export function Splitwise() {
 
   return (
     <div className="fade-in">
-      {/* Create group + Join group — side by side */}
-      <div className="group-top-row">
-        <div className="card">
+      <div className="tab-bar">
+        <button 
+          className={`tab-btn ${activeTab === "your_groups" ? "active" : ""}`}
+          onClick={() => setActiveTab("your_groups")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Your Groups
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === "create_join" ? "active" : ""}`}
+          onClick={() => setActiveTab("create_join")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          Create / Join
+        </button>
+      </div>
+
+      {activeTab === "your_groups" && (
+        <div className="fade-in">
+          {groups.length === 0 ? (
+            <div className="card" style={{ textAlign: "center", padding: "40px 20px", marginTop: 16 }}>
+              <div style={{ color: "var(--text-muted)", marginBottom: 16 }}>You are not a part of any groups yet.</div>
+              <button className="btn btn-primary" onClick={() => setActiveTab("create_join")}>Create or Join a Group</button>
+            </div>
+          ) : (
+            <div className="group-cards-container">
+          <div className="group-cards-header">
+            <h2 className="group-cards-title">Your Groups</h2>
+          </div>
+          <div className="group-cards-grid">
+            {groups.map((g, idx) => {
+              const bgClass = `group-bg-${idx % 8}`;
+              const isSelected = g.id === selectedGroupId;
+              
+              return (
+                <div 
+                  key={g.id} 
+                  className={`group-card-item ${isSelected ? 'active' : ''} ${bgClass}`}
+                  onClick={() => selectGroup(g.id)}
+                >
+                  <div className="group-card-content">
+                    <h3 className="group-card-name">{g.name}</h3>
+                    <div className="group-card-members">{g.members.length} member{g.members.length !== 1 ? 's' : ''}</div>
+                  </div>
+                  {isAdmin(g) && (
+                    <button 
+                      className="group-delete-btn" 
+                      onClick={(e) => deleteGroup(e, g.id, g.name)}
+                      title="Delete group"
+                      disabled={isDeletingGroups}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "create_join" && (
+        <div className="group-top-row fade-in">
+          <div className="card">
           <div className="card-title" style={{ marginBottom: 14 }}>Create a new group</div>
           <form onSubmit={createGroup}>
             <div className="form-row">
@@ -1110,7 +1170,7 @@ export function Splitwise() {
               </div>
               <div className="field" style={{ flex: "0 0 auto" }}>
                 <label className="field-label hidden-mobile">&nbsp;</label>
-                <button type="submit" className="btn btn-primary">Create</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: "10px 20px" }}>Create</button>
               </div>
             </div>
           </form>
@@ -1136,7 +1196,7 @@ export function Splitwise() {
                 <div className="field" style={{ flex: "0 0 auto" }}>
                   <label className="field-label hidden-mobile">&nbsp;</label>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button type="submit" className="btn btn-secondary" disabled={joinLoading || !joinCode.trim()}>
+                    <button type="submit" className="btn btn-secondary" disabled={joinLoading || !joinCode.trim()} style={{ padding: "10px 16px" }}>
                       {joinLoading ? "Joining..." : "Join"}
                     </button>
                     <button
@@ -1144,8 +1204,9 @@ export function Splitwise() {
                       className="btn btn-scan"
                       onClick={startScanner}
                       title="Scan QR Code"
+                      style={{ padding: "10px 12px" }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
                         <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
                         <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
                         <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
@@ -1235,58 +1296,10 @@ export function Splitwise() {
           )}
         </div>
       </div>
-
-      {/* Group pills */}
-      {groups.length > 0 && (
-        <>
-          <div className="group-pills-toolbar">
-            <div className="group-pills-note">Select groups and click delete to remove them.</div>
-            <button
-              type="button"
-              className="btn btn-danger btn-sm"
-              onClick={deleteSelectedGroups}
-              disabled={selectedGroupIds.size === 0 || isDeletingGroups}
-            >
-              {isDeletingGroups ? "Deleting..." : `Delete selected (${selectedGroupIds.size})`}
-            </button>
-          </div>
-
-          <div className="group-pills">
-            {groups.map((g) => (
-              <div key={g.id} className="group-pill-wrap">
-                <input
-                  className="group-pill-inline-check"
-                  type="checkbox"
-                  checked={selectedGroupIds.has(g.id)}
-                  onChange={() => toggleGroupSelection(g.id)}
-                  aria-label={`Select group ${g.name}`}
-                  title={`Select ${g.name}`}
-                />
-
-                <button
-                  type="button"
-                  className={
-                    g.id === selectedGroupId
-                      ? selectedGroupIds.has(g.id)
-                        ? "group-pill active selected-for-delete"
-                        : "group-pill active"
-                      : selectedGroupIds.has(g.id)
-                      ? "group-pill selected-for-delete"
-                      : "group-pill"
-                  }
-                  onClick={() => selectGroup(g.id)}
-                >
-                  {g.name}
-                  <span className="pill-count">{g.members.length}</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </>
       )}
 
       {/* Group detail */}
-      {currentGroup && (
+      {activeTab === "your_groups" && currentGroup && (
         <>
           {/* Invite code bar */}
           <div className="invite-code-bar">
@@ -1793,18 +1806,73 @@ export function Splitwise() {
               <div className="form-row" style={{ marginBottom: 10 }}>
                 <div className="field">
                   <label className="field-label">Paid by</label>
-                  <select className="field-select" value={paidById} onChange={(e) => setPaidById(e.target.value)}>
-                    {currentGroup.members.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}{isMe(m) ? " (You)" : ""}</option>
-                    ))}
-                  </select>
+                  <div className="custom-form-dropdown" ref={paidByMenuRef}>
+                    <button
+                      type="button"
+                      className={`form-dropdown-trigger ${isPaidByMenuOpen ? "open" : ""}`}
+                      onClick={() => setIsPaidByMenuOpen((p) => !p)}
+                    >
+                      <span className="form-dropdown-text">
+                        {currentGroup.members.find((m) => m.id === paidById)?.name ?? "Select member"}
+                        {currentGroup.members.find((m) => m.id === paidById) && isMe(currentGroup.members.find((m) => m.id === paidById)!) ? " (You)" : ""}
+                      </span>
+                      <span className="form-dropdown-arrow">▾</span>
+                    </button>
+                    {isPaidByMenuOpen && (
+                      <div className="form-dropdown-menu">
+                        {currentGroup.members.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className={`form-dropdown-option ${paidById === m.id ? "active" : ""}`}
+                            onClick={() => {
+                              setPaidById(m.id);
+                              setIsPaidByMenuOpen(false);
+                            }}
+                          >
+                            {m.name}{isMe(m) ? " (You)" : ""}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="field">
                   <label className="field-label">Split type</label>
-                  <select className="field-select" value={splitType} onChange={(e) => setSplitType(e.target.value as "equal" | "custom")}>
-                    <option value="equal">Equal split</option>
-                    <option value="custom">Custom amounts</option>
-                  </select>
+                  <div className="custom-form-dropdown" ref={splitTypeMenuRef}>
+                    <button
+                      type="button"
+                      className={`form-dropdown-trigger ${isSplitTypeMenuOpen ? "open" : ""}`}
+                      onClick={() => setIsSplitTypeMenuOpen((p) => !p)}
+                    >
+                      <span className="form-dropdown-text">{splitType === "equal" ? "Equal split" : "Custom amounts"}</span>
+                      <span className="form-dropdown-arrow">▾</span>
+                    </button>
+                    {isSplitTypeMenuOpen && (
+                      <div className="form-dropdown-menu">
+                        <button
+                          type="button"
+                          className={`form-dropdown-option ${splitType === "equal" ? "active" : ""}`}
+                          onClick={() => {
+                            setSplitType("equal");
+                            setIsSplitTypeMenuOpen(false);
+                          }}
+                        >
+                          Equal split
+                        </button>
+                        <button
+                          type="button"
+                          className={`form-dropdown-option ${splitType === "custom" ? "active" : ""}`}
+                          onClick={() => {
+                            setSplitType("custom");
+                            setIsSplitTypeMenuOpen(false);
+                          }}
+                        >
+                          Custom amounts
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1813,7 +1881,12 @@ export function Splitwise() {
                 <div className="split-checks">
                   {currentGroup.members.map((m) => (
                     <label key={m.id} className="split-check">
-                      <input type="checkbox" checked={selectedIds.has(m.id)} onChange={() => toggle(m.id)} />
+                      <div className="checkbox-wrapper">
+                        <input type="checkbox" className="custom-checkbox" checked={selectedIds.has(m.id)} onChange={() => toggle(m.id)} />
+                        <div className="checkbox-box">
+                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                      </div>
                       <div>
                         <div className="split-check-label">{m.name}{isMe(m) ? " (You)" : ""}</div>
                         <div className="split-check-email">{m.email}</div>

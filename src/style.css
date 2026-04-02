@@ -720,7 +720,201 @@ p  { color: var(--text-secondary); line-height: 1.65; }
   gap: 14px; margin-bottom: 20px;
 }
 
+/* New analytics layout: top row (pie + bar), bottom row (line full width) */
+.charts-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.charts-bottom-row {
+  margin-bottom: 20px;
+}
+
+.charts-pie-card {
+  min-height: 0;
+}
+
+.charts-bar-card {
+  min-height: 0;
+}
+
 .chart-area { height: 270px; margin-top: 10px; }
+
+/* ── Pie filter row ── */
+.pie-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.pie-filter-row .filter-pills {
+  flex-shrink: 0;
+}
+
+/* ── Month Dropdown ── */
+.month-dropdown {
+  position: relative;
+  flex: 1;
+  min-width: 140px;
+}
+
+.month-dropdown-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.month-dropdown-trigger:hover {
+  border-color: var(--border-hover, #4f4f5a);
+}
+
+.month-dropdown-trigger.has-value {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.month-dropdown-icon {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.month-dropdown-trigger.has-value .month-dropdown-icon {
+  opacity: 1;
+}
+
+.month-dropdown-text {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.month-dropdown-arrow {
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.month-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 100%;
+  min-width: 160px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.month-dropdown-option {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.month-dropdown-option:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.month-dropdown-option.active {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Add expense card ── */
+.add-expense-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.add-expense-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.add-expense-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.add-expense-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.add-expense-btn {
+  margin-top: auto;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Pie chart area polished ── */
+.charts-pie-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pie-chart-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  height: auto;
+  margin-top: 4px;
+}
+
 
 /* ── Forms ── */
 .form-row {
@@ -1371,6 +1565,106 @@ p  { color: var(--text-secondary); line-height: 1.65; }
   text-transform: uppercase;
 }
 
+/* ─── Group Cards Grid ─── */
+.group-cards-container {
+  margin-bottom: 24px;
+}
+.group-cards-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.group-cards-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.group-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+.group-card-item {
+  position: relative;
+  height: 120px;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  overflow: hidden;
+  border: 2px solid transparent;
+}
+.group-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  filter: brightness(1.1);
+}
+.group-card-item.active {
+  border-color: #fff;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+}
+.group-card-content {
+  position: relative;
+  z-index: 2;
+}
+.group-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.group-card-members {
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.group-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.3);
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  z-index: 3;
+}
+.group-card-item:hover .group-delete-btn {
+  opacity: 1;
+}
+.group-delete-btn:hover {
+  background: var(--red);
+  transform: scale(1.1);
+}
+
+/* Group Backgrounds */
+.group-bg-0 { background: linear-gradient(135deg, #FF6B6B, #C0392B); }
+.group-bg-1 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+.group-bg-2 { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+.group-bg-3 { background: linear-gradient(135deg, #fa709a, #fee140); }
+.group-bg-4 { background: linear-gradient(135deg, #667eea, #764ba2); }
+.group-bg-5 { background: linear-gradient(135deg, #f77062, #fe5196); }
+.group-bg-6 { background: linear-gradient(135deg, #16a085, #f4d03f); }
+.group-bg-7 { background: linear-gradient(135deg, #b224ef, #7579ff); }
+
 /* ─── Create + Join group row ─── */
 .group-top-row {
   display: flex;
@@ -1670,6 +1964,7 @@ p  { color: var(--text-secondary); line-height: 1.65; }
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .charts-row { grid-template-columns: 1fr; }
+  .charts-top-row { grid-template-columns: 1fr; }
   .split-cols { grid-template-columns: 1fr; }
   .expenses-overview-grid { grid-template-columns: 1fr; }
   /* Don't collapse stats row completely on tablet, keep as flex wrapping or grid */
@@ -2826,4 +3121,212 @@ p  { color: var(--text-secondary); line-height: 1.65; }
   .scanner-viewport {
     max-width: 280px;
   }
+}
+
+/* ── Custom Form Dropdowns ── */
+.custom-form-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.form-dropdown-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.form-dropdown-trigger:hover {
+  border-color: var(--border-hover);
+}
+
+.form-dropdown-trigger.open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.form-dropdown-text {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.form-dropdown-arrow {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.form-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  z-index: 50;
+  max-height: 240px;
+  overflow-y: auto;
+  animation: slideDown 0.15s ease-out;
+}
+
+.form-dropdown-option {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.form-dropdown-option:hover {
+  background: var(--bg-hover);
+}
+
+.form-dropdown-option.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+
+/* ── Custom Checkboxes (Split Between) ── */
+.split-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  margin-bottom: 8px;
+}
+
+.split-check:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-hover);
+}
+
+.checkbox-wrapper {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.custom-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkbox-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 20px;
+  width: 20px;
+  background-color: var(--bg-body);
+  border: 2px solid var(--border-hover);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-checkbox:checked ~ .checkbox-box {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.custom-checkbox:focus-visible ~ .checkbox-box {
+  outline: 2px solid var(--accent-subtle);
+  outline-offset: 2px;
+}
+
+.checkbox-box svg {
+  width: 14px;
+  height: 14px;
+  color: white;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.2s ease;
+}
+
+.custom-checkbox:checked ~ .checkbox-box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.split-check-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.split-check-email {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Custom Form Scrollbars ── */
+.form-dropdown-menu,
+.split-checks {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 42%, transparent 58%) transparent;
+}
+
+.form-dropdown-menu::-webkit-scrollbar,
+.split-checks::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.form-dropdown-menu::-webkit-scrollbar-track,
+.split-checks::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.form-dropdown-menu::-webkit-scrollbar-thumb,
+.split-checks::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 40%, transparent 60%);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.form-dropdown-menu::-webkit-scrollbar-thumb:hover,
+.split-checks::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-secondary) 58%, transparent 42%);
+}
+
+.form-dropdown-menu::-webkit-scrollbar-button,
+.split-checks::-webkit-scrollbar-button {
+  display: none;
 }
