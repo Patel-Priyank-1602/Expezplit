@@ -3,6 +3,7 @@ import { useUser } from "@clerk/react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "./lib/supabase";
 import { createExpenseNotifications, settleNotification } from "./Notifications";
+import { sendExpenseEmailNotifications } from "./lib/emailService";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { QRCodeSVG } from "qrcode.react";
 import { Html5Qrcode } from "html5-qrcode";
@@ -869,13 +870,18 @@ export function Splitwise() {
     setGroups((p) => p.map((g) => (g.id === updated.id ? updated : g)));
 
     // Create real-time notifications for all involved members
+    const payer = currentGroup.members.find((m) => m.id === (paidById || currentGroup.members[0]?.id));
+    const payerName = payer?.name ?? "Unknown";
+    const payerEmail = payer?.email ?? "";
+    const payerUpiId = payer?.upi_id ?? null;
+
     createExpenseNotifications({
       expenseId: exp.id,
       groupId: currentGroup.id,
       description: expDesc.trim(),
       amount: valBase,
-      paidByName: currentGroup.members.find((m) => m.id === (paidById || currentGroup.members[0]?.id))?.name ?? "Unknown",
-      paidByEmail: currentGroup.members.find((m) => m.id === (paidById || currentGroup.members[0]?.id))?.email ?? "",
+      paidByName: payerName,
+      paidByEmail: payerEmail,
       splits: (splitData ?? []).map((s: any) => {
         const member = currentGroup.members.find((m) => m.id === s.member_id);
         return {
@@ -884,6 +890,29 @@ export function Splitwise() {
           amount: Number(s.amount),
         };
       }),
+    });
+
+    // Send email notifications to participants (async, non-blocking)
+    sendExpenseEmailNotifications({
+      participants: (splitData ?? []).map((s: any) => {
+        const member = currentGroup.members.find((m) => m.id === s.member_id);
+        return {
+          name: member?.name ?? "Unknown",
+          email: member?.email ?? "",
+          amount: convertFromBase(Number(s.amount)),
+        };
+      }),
+      groupName: currentGroup.name,
+      payerName,
+      payerEmail,
+      payerUpiId,
+      expenseDescription: expDesc.trim(),
+    }).then((result) => {
+      if (result.success) {
+        console.log(`Email notifications sent: ${result.message}`);
+      } else {
+        console.warn("Email notifications failed:", result.error);
+      }
     });
 
     setExpDesc(""); setExpAmount(""); setCustomAmounts({});

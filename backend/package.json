@@ -1,0 +1,17 @@
+{
+  "name": "expezplit-backend",
+  "version": "1.0.0",
+  "description": "Email notification server for Expezplit",
+  "type": "module",
+  "main": "emailServer.mjs",
+  "scripts": {
+    "start": "node emailServer.mjs",
+    "dev": "node --watch emailServer.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "nodemailer": "^6.9.13"
+  }
+}
