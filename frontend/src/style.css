@@ -3330,3 +3330,1298 @@ p  { color: var(--text-secondary); line-height: 1.65; }
 .split-checks::-webkit-scrollbar-button {
   display: none;
 }
+
+/* ══════════════════════════════════════════
+   ANALYTICS DASHBOARD — Professional
+   ══════════════════════════════════════════ */
+
+.analytics-dashboard {
+  animation: introRise 420ms ease both;
+}
+
+.ana-mode-switch {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  margin-bottom: 14px;
+}
+
+.ana-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.ana-mode-btn:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.ana-mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Analytics header row with currency picker */
+.ana-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.ana-rate-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  flex: 1;
+}
+
+.ana-rate-info.error {
+  color: var(--red);
+}
+
+.analytics-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ─── Section Headers ─── */
+.ana-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  margin-top: 8px;
+}
+
+.ana-section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.ana-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.ana-section-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ─── KPI Grid ─── */
+.ana-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ana-kpi {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 16px;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  animation: cardLiftIn 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ana-kpi::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(124, 92, 252, 0.7), rgba(59, 130, 246, 0.45));
+}
+
+.ana-kpi:nth-child(1) { animation-delay: 30ms; }
+.ana-kpi:nth-child(2) { animation-delay: 80ms; }
+.ana-kpi:nth-child(3) { animation-delay: 130ms; }
+.ana-kpi:nth-child(4) { animation-delay: 180ms; }
+
+.ana-kpi:hover {
+  border-color: var(--accent-soft);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.ana-kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ana-kpi-body {
+  min-width: 0;
+}
+
+.ana-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.ana-kpi-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.ana-kpi-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.ana-kpi-badge.negative {
+  color: var(--red);
+  background: var(--red-subtle);
+}
+
+.ana-kpi-badge.positive {
+  color: var(--green);
+  background: var(--green-subtle);
+}
+
+.ana-kpi-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ─── Metrics Bar ─── */
+.ana-metrics-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0;
+  padding: 14px 24px;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  margin-bottom: 24px;
+  animation: cardLiftIn 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 220ms;
+  flex-wrap: wrap;
+}
+
+.ana-metric {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ana-metric-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ana-metric-icon.purple { background: var(--accent-subtle); color: var(--accent); }
+.ana-metric-icon.amber  { background: rgba(245, 158, 11, 0.12); color: var(--amber); }
+.ana-metric-icon.blue   { background: rgba(59, 130, 246, 0.12); color: var(--blue); }
+.ana-metric-icon.green  { background: var(--green-subtle); color: var(--green); }
+.ana-metric-icon.red    { background: var(--red-subtle); color: var(--red); }
+
+.ana-metric-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.ana-metric-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ana-metric--annual {
+  min-width: 170px;
+}
+
+.ana-metric-val--annual {
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.ana-metrics-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* ─── Chart Layout ─── */
+.ana-row {
+  margin-bottom: 14px;
+}
+
+.ana-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ana-chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Gauge Center Label ─── */
+.ana-gauge-center {
+  position: relative;
+  margin-top: -85px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.ana-gauge-pct {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.ana-gauge-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* ─── Projected Rows ─── */
+.ana-proj-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ana-proj-row:last-child {
+  border-bottom: none;
+}
+
+.ana-proj-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ana-proj-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Top Expenses List ─── */
+.ana-top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ana-top-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  border: 1px solid transparent;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.ana-top-item:hover {
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+
+.ana-top-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ana-top-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ana-top-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ana-top-cat {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ana-top-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ─── Category Breakdown ─── */
+.ana-cat-card {
+  margin-bottom: 24px;
+  animation: cardLiftIn 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 300ms;
+}
+
+.ana-cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ana-cat-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 18px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  border: 1px solid transparent;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.ana-cat-row:hover {
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+
+.ana-cat-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ana-cat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ana-cat-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ana-cat-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ana-cat-right {
+  text-align: right;
+}
+
+.ana-cat-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ana-cat-pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ana-cat-bar-track {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-raised) 60%, var(--text-muted) 15%);
+  overflow: hidden;
+}
+
+.ana-cat-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ─── Gauge Container ─── */
+.ana-gauge-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+}
+
+.ana-gauge-dial {
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+}
+
+.ana-gauge-stats {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Donut Chart Layout ─── */
+.ana-donut-area {
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ana-donut-legend .recharts-legend-item {
+  margin-bottom: 4px;
+}
+
+/* ─── Chart System ─── */
+.ana-chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── Spending Pace & Month Progress ─── */
+.ana-pace-progress-row {
+  margin-bottom: 14px;
+}
+
+.ana-pace-card,
+.ana-progress-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-area--pace,
+.chart-area--progress {
+  height: 200px;
+  position: relative;
+}
+
+.chart-inner--pace,
+.chart-inner--progress {
+  min-width: 100%;
+  height: 100%;
+  width: 100%;
+}
+
+/* Spending Pace Summary */
+.ana-pace-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+
+.ana-pace-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ana-pace-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ana-pace-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.ana-pace-val {
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Month Progress */
+.ana-progress-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.ana-progress-pct {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.ana-progress-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.ana-progress-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+
+.ana-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ana-progress-detail-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.ana-progress-detail-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Responsive: Desktop ─── */
+@media (max-width: 1024px) {
+  .ana-two-col { grid-template-columns: 1fr; }
+}
+
+/* ─── Responsive: Tablet ─── */
+@media (max-width: 768px) {
+  .dashboard { padding: 16px 16px 32px; }
+
+  .ana-two-col { grid-template-columns: 1fr; gap: 14px; }
+
+  .ana-metrics-bar { flex-wrap: wrap; gap: 12px; }
+  .ana-metric { flex: 0 0 calc(50% - 6px); }
+  .ana-metric--annual { flex-basis: 100%; }
+
+  .ana-gauge-container { flex-wrap: wrap; justify-content: center; }
+
+  .ana-section-title { font-size: 15px; }
+
+  .ana-proj-label { font-size: 12px; }
+  .ana-proj-val { font-size: 13px; }
+
+  /* Spending Pace & Month Progress — tablet */
+  .ana-pace-progress-row { 
+    display: grid !important;
+    grid-template-columns: 1fr !important; 
+    gap: 14px !important; 
+  }
+  .ana-pace-summary {
+    flex-wrap: wrap;
+  }
+  .ana-progress-pct {
+    font-size: 24px;
+  }
+}
+
+
+/* ─── Responsive: Mobile ─── */
+@media (max-width: 640px) {
+  .dashboard { padding: 10px 10px 24px; }
+  .ana-mode-switch { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .ana-mode-btn { width: 100%; text-align: center; padding: 8px 6px; font-size: 12px; }
+
+  /* 2-col KPI grid on mobile — compact horizontal cards */
+  .ana-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+
+  .ana-kpi {
+    flex-direction: row;
+    align-items: center;
+    padding: 11px 10px;
+    gap: 9px;
+    min-height: 92px;
+  }
+
+  .ana-kpi::after { height: 1px; }
+  .ana-kpi-icon { width: 32px; height: 32px; border-radius: 8px; }
+  .ana-kpi-icon svg { width: 16px; height: 16px; }
+
+  .ana-kpi-label { font-size: 9px; margin-bottom: 2px; line-height: 1.15; }
+  .ana-kpi-value { font-size: 1rem; margin-bottom: 2px; line-height: 1.15; }
+  .ana-kpi-hint { font-size: 10px; line-height: 1.25; }
+  .ana-kpi-badge { font-size: 10px; padding: 2px 6px; }
+
+  /* Single col layouts */
+  .ana-two-col { grid-template-columns: 1fr; gap: 10px; }
+
+  /* Metrics bar — 2-col grid */
+  .ana-metrics-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+  .ana-metrics-divider { display: none; }
+  .ana-metric {
+    flex: none;
+    padding: 10px 8px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg-raised) 88%, var(--bg-surface) 12%), var(--bg-raised));
+    border-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--border) 82%, transparent 18%);
+    min-height: 54px;
+  }
+  .ana-metric-val { font-size: 0.95rem; }
+  .ana-metric-label { font-size: 10px; line-height: 1.2; }
+  .ana-metric-icon { width: 28px; height: 28px; border-radius: 6px; }
+  .ana-metric--annual {
+    grid-column: 1 / -1;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+  }
+  .ana-metric--annual .ana-metric-label {
+    white-space: normal;
+  }
+  .ana-metric-val--annual {
+    font-size: 1.12rem;
+  }
+
+  /* Gauge — vertical stack, centered dial */
+  .ana-gauge-container { flex-direction: column; align-items: center; gap: 16px; padding: 8px 0; }
+  .ana-gauge-dial { width: 120px; height: 120px; }
+  .ana-gauge-stats { width: 100%; }
+
+  /* Donut — taller for legend */
+  .ana-donut-area { height: 300px; }
+
+  /* Projection rows */
+  .ana-proj-label { font-size: 12px; }
+  .ana-proj-val { font-size: 13px; }
+
+  /* Section header */
+  .ana-section-header { margin-bottom: 10px; gap: 8px; }
+  .ana-section-title { font-size: 14px; }
+  .ana-section-sub { font-size: 11px; }
+
+  /* Category breakdown */
+  .ana-cat-name { font-size: 13px; }
+  .ana-cat-amount { font-size: 13px; }
+  .ana-cat-row { padding: 10px 10px; }
+
+  /* Top items list */
+  .ana-top-name { font-size: 13px; }
+  .ana-top-amount { font-size: 13px; }
+
+  /* Spending Pace & Month Progress — mobile */
+  .ana-pace-progress-row { 
+    display: grid !important;
+    grid-template-columns: 1fr !important; 
+    gap: 10px !important; 
+  }
+  .ana-pace-card,
+  .ana-progress-card {
+    width: 100%;
+  }
+  .ana-pace-summary { 
+    flex-direction: column; 
+    gap: 8px; 
+    padding: 10px 0 0; 
+    margin-top: 10px; 
+  }
+  .ana-pace-stat { 
+    font-size: 12px; 
+    gap: 6px; 
+    flex-wrap: wrap;
+  }
+  .ana-pace-label {
+    font-size: 11px;
+  }
+  .ana-pace-val {
+    font-size: 12px;
+  }
+  .ana-pace-dot { width: 8px; height: 8px; }
+  .ana-progress-center { 
+    top: 50%; 
+    left: 50%;
+  }
+  .ana-progress-pct { font-size: 20px; }
+  .ana-progress-label { font-size: 9px; }
+  .ana-progress-details { 
+    gap: 6px; 
+    padding: 10px 0 0; 
+    margin-top: 10px; 
+  }
+  .ana-progress-detail-label { font-size: 11px; }
+  .ana-progress-detail-val { font-size: 12px; }
+
+  /* Card padding */
+  .card { padding: 14px; }
+  .card-head { margin-bottom: 12px; }
+  .card-title { font-size: 14px; }
+  .card-sub { font-size: 11px; }
+
+  /* Row margins */
+  .ana-row { margin-bottom: 10px; }
+  .ana-cat-card { margin-bottom: 10px; }
+}
+
+/* ─── Responsive: Small mobile ─── */
+@media (max-width: 480px) {
+  /* Hide text in download button to save space */
+  .nav-actions .btn .hidden-sm { display: none; }
+
+  /* Tab bar — full width, equally split */
+  .tab-bar { display: flex; width: 100%; }
+  .tab-btn {
+    flex: 1; min-width: 0;
+    padding: 7px 2px;
+    font-size: 10px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3px;
+  }
+  .tab-btn svg { margin-right: 0 !important; width: 14px; height: 14px; }
+
+  /* Nav */
+  .nav { padding: 0 12px; height: 52px; }
+  .nav-logo { font-size: 15px; }
+
+  /* KPI grid — force 2 cols */
+  .ana-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .ana-kpi { padding: 10px 8px; gap: 7px; min-height: 88px; }
+  .ana-kpi-icon { width: 30px; height: 30px; }
+  .ana-kpi-value { font-size: 0.95rem; }
+
+  /* Metrics bar */
+  .ana-metrics-bar { grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; }
+  .ana-metric { padding: 8px 7px; min-height: 50px; gap: 8px; }
+  .ana-metric-icon { width: 24px; height: 24px; }
+  .ana-metric-val { font-size: 0.9rem; }
+  .ana-metric-label { font-size: 9px; }
+  .ana-metric-val--annual { font-size: 1.02rem; }
+
+  /* Spending Pace & Month Progress — small mobile */
+  .ana-pace-progress-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .ana-pace-summary {
+    padding: 8px 0 0;
+    margin-top: 8px;
+    gap: 6px;
+  }
+  .ana-pace-stat {
+    font-size: 11px;
+  }
+  .ana-pace-label {
+    font-size: 10px;
+  }
+  .ana-pace-val {
+    font-size: 11px;
+  }
+  .ana-progress-pct {
+    font-size: 18px;
+  }
+  .ana-progress-label {
+    font-size: 8px;
+  }
+  .ana-progress-details {
+    padding: 8px 0 0;
+    margin-top: 8px;
+    gap: 5px;
+  }
+  .ana-progress-detail-label {
+    font-size: 10px;
+  }
+  .ana-progress-detail-val {
+    font-size: 11px;
+  }
+}
+
+/* ─── Responsive: Extra small (360px phones) ─── */
+@media (max-width: 390px) {
+  .dashboard { padding: 8px 8px 20px; }
+
+  .ana-kpi-grid { gap: 5px; }
+  .ana-kpi { padding: 8px; gap: 6px; }
+  .ana-kpi-icon { width: 28px; height: 28px; border-radius: 7px; }
+  .ana-kpi-icon svg { width: 14px; height: 14px; }
+  .ana-kpi-value { font-size: 0.9rem; }
+  .ana-kpi-label { font-size: 9px; }
+
+  .card { padding: 10px; }
+  .card-title { font-size: 13px; }
+
+  /* Spending Pace & Month Progress — extra small */
+  .ana-pace-stat {
+    font-size: 10px;
+  }
+  .ana-pace-label,
+  .ana-pace-val {
+    font-size: 10px;
+  }
+  .ana-progress-pct {
+    font-size: 16px;
+  }
+  .ana-progress-detail-label,
+  .ana-progress-detail-val {
+    font-size: 10px;
+  }
+}
+
+/* --- Chart System --- */
+.chart-area--sm { height: 240px; }
+.chart-area--bar { height: 300px; }
+.chart-area--area { height: 280px; }
+.chart-area--lg { height: 320px; }
+.chart-area--donut { height: 280px; }
+.chart-area--pace { height: 200px; }
+.chart-area--progress { height: 200px; position: relative; }
+
+.chart-scroll-wrapper {
+  width: 100%; 
+  height: 100%;
+  overflow-x: hidden; 
+  overflow-y: hidden;
+}
+
+.chart-inner-container { 
+  width: 100%; 
+  height: 100%; 
+}
+
+/* Enable horizontal scroll only on mobile */
+@media (max-width: 640px) {
+  .chart-scroll-wrapper {
+    overflow-x: scroll !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 12px;
+  }
+  
+  /* Firefox scrollbar */
+  .chart-scroll-wrapper {
+    scrollbar-width: auto;
+    scrollbar-color: var(--accent) var(--bg-raised);
+  }
+  
+  /* Chrome/Safari scrollbar - always visible */
+  .chart-scroll-wrapper::-webkit-scrollbar { 
+    height: 10px !important;
+    display: block !important;
+  }
+  .chart-scroll-wrapper::-webkit-scrollbar-track { 
+    background: var(--bg-raised); 
+    border-radius: 10px; 
+  }
+  .chart-scroll-wrapper::-webkit-scrollbar-thumb { 
+    background: var(--accent); 
+    border-radius: 10px;
+    min-width: 60px;
+  }
+  .chart-scroll-wrapper::-webkit-scrollbar-thumb:hover { 
+    background: var(--accent-hover, #9f7afa); 
+  }
+
+  /* Force chart inner containers to have fixed min-width for scroll */
+  .chart-inner-container { 
+    width: 550px !important;
+    min-width: 550px !important;
+    flex-shrink: 0;
+  }
+  .chart-inner--bar { 
+    width: 480px !important;
+    min-width: 480px !important;
+  }
+  .chart-inner--area { 
+    width: 550px !important;
+    min-width: 550px !important;
+  }
+  .chart-inner--week,
+  .chart-inner--donut,
+  .chart-inner--pace,
+  .chart-inner--progress {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .chart-area--sm  { height: 200px; }
+  .chart-area--bar { height: 240px; }
+  .chart-area--area{ height: 220px; }
+  .chart-area--lg  { height: 260px; }
+  .chart-area--donut { height: 290px; }
+  .chart-area--pace { height: 220px; }
+  .chart-area--progress { height: 200px; }
+}
+
+@media (max-width: 480px) {
+  .chart-area--sm  { height: 180px; }
+  .chart-area--bar { height: 210px; }
+  .chart-area--area{ height: 200px; }
+  .chart-area--lg  { height: 230px; }
+  .chart-area--donut { height: 270px; }
+  .chart-area--pace { height: 200px; }
+  .chart-area--progress { height: 190px; }
+
+  .chart-inner--pace,
+  .chart-inner--progress,
+  .chart-inner--donut {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+}
+
+/* ═══════════════════════════════════════
+   ANALYTICS MOBILE RESPONSIVENESS FIXES
+   ═══════════════════════════════════════ */
+
+/* Prevent horizontal overflow on analytics dashboard */
+.analytics-dashboard {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Card titles and headers - prevent clipping */
+@media (max-width: 640px) {
+  .card-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .card-head > div:first-child {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .card-title {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+
+  .card-sub {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Filter pills on mobile - full width */
+  .filter-pills {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pill {
+    flex: 1;
+    text-align: center;
+    padding: 6px 8px;
+    font-size: 11px;
+    min-width: 0;
+  }
+
+  /* Section headers - prevent overflow */
+  .ana-section-header {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .ana-section-header > div:last-child {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .ana-section-title,
+  .ana-section-sub {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Analytics dashboard header row */
+  .ana-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .ana-rate-info {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  /* Gauge container mobile */
+  .ana-gauge-container {
+    padding: 0;
+  }
+
+  .ana-gauge-dial {
+    margin: 0 auto;
+  }
+
+  .ana-gauge-center {
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+
+  .ana-gauge-pct {
+    font-size: 1.4rem;
+  }
+
+  .ana-gauge-label {
+    font-size: 11px;
+  }
+
+  /* Projection rows mobile */
+  .ana-proj-row {
+    padding: 8px 0;
+  }
+
+  /* Top expenses list mobile */
+  .ana-top-item {
+    padding: 10px 8px;
+    gap: 8px;
+  }
+
+  .ana-top-rank {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  .ana-top-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .ana-top-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ana-top-cat {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ana-top-amount {
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  /* Category breakdown mobile */
+  .ana-cat-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ana-cat-left {
+    flex: 1 1 100%;
+  }
+
+  .ana-cat-right {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
+  .ana-cat-bar-track {
+    flex: 1 1 100%;
+    margin-top: 4px;
+  }
+
+  .ana-cat-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small mobile adjustments */
+  .pill {
+    padding: 5px 6px;
+    font-size: 10px;
+  }
+
+  .ana-section-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .ana-section-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Donut chart legend */
+  .ana-donut-area .recharts-legend-wrapper {
+    font-size: 10px !important;
+  }
+
+  .ana-donut-legend .recharts-legend-item {
+    margin-right: 8px !important;
+  }
+
+  /* Gauge smaller on very small screens */
+  .ana-gauge-dial {
+    width: 100px;
+    height: 100px;
+  }
+
+  .ana-gauge-pct {
+    font-size: 1.2rem;
+  }
+
+  .ana-gauge-label {
+    font-size: 10px;
+  }
+
+  /* Category breakdown - more compact */
+  .ana-cat-row {
+    padding: 8px;
+  }
+
+  .ana-cat-name {
+    font-size: 12px;
+    max-width: 150px;
+  }
+
+  .ana-cat-amount {
+    font-size: 12px;
+  }
+
+  .ana-cat-pct {
+    font-size: 11px;
+  }
+
+  .ana-cat-meta {
+    font-size: 10px;
+  }
+
+  /* Top expenses - more compact */
+  .ana-top-name {
+    font-size: 12px;
+  }
+
+  .ana-top-cat {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 390px) {
+  /* Tiniest phones */
+  .ana-gauge-dial {
+    width: 90px;
+    height: 90px;
+  }
+
+  .ana-gauge-pct {
+    font-size: 1rem;
+  }
+
+  .ana-cat-name {
+    max-width: 120px;
+  }
+
+  .ana-proj-label {
+    font-size: 11px;
+  }
+
+  .ana-proj-val {
+    font-size: 12px;
+  }
+}

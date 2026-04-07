@@ -1105,48 +1105,62 @@ export function ExpenseTracker() {
             {barChartData.length === 0
               ? empty("Add expenses to see the chart")
               : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={barView === "all" ? barChartData : barCategoryData}
-                    margin={{ left: 10, right: 10, top: 5, bottom: 5 }}
-                    barGap={0}
-                    barCategoryGap={0}
-                  >
-                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fill: "var(--text-muted)", fontSize: 11 }}
-                      axisLine={{ stroke: "var(--border)" }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fill: "var(--text-muted)", fontSize: 12 }}
-                      axisLine={{ stroke: "var(--border)" }}
-                      tickLine={false}
-                      tickFormatter={(value: number) => `${currencySymbol}${Math.round(value)}`}
-                    />
-                    <Tooltip
-                      contentStyle={{ background: "var(--bg-raised)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
-                      formatter={(value: any, name: any) => [`${currencySymbol}${Number(value).toFixed(2)}`, String(name)]}
-                      cursor={{ fill: "rgba(124, 92, 252, 0.08)" }}
-                    />
-                    <Legend />
-
-                    {barView === "all" ? (
-                      <Bar dataKey="total" name="Total" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                    ) : (
-                      barCategorySeries.map((series) => (
-                        <Bar
-                          key={series.key}
-                          dataKey={series.key}
-                          name={series.name}
-                          fill={series.color}
-                          radius={[2, 2, 0, 0]}
+                <div className="chart-scroll-wrapper">
+                  <div className="chart-inner-container">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={barView === "all" ? barChartData : barCategoryData}
+                        margin={{ left: 10, right: 10, top: 8, bottom: 8 }}
+                        barGap={0}
+                        barCategoryGap={8}
+                      >
+                        <defs>
+                          <linearGradient id="expenseBarGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#60A5FA" stopOpacity={1} />
+                            <stop offset="100%" stopColor="#2563EB" stopOpacity={0.88} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} opacity={0.65} />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                          axisLine={{ stroke: "var(--border)" }}
+                          tickLine={false}
+                          tickFormatter={(value: string) => format(parseISO(value), "MMM d")}
+                          minTickGap={18}
                         />
-                      ))
-                    )}
-                  </BarChart>
-                </ResponsiveContainer>
+                        <YAxis
+                          tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+                          axisLine={{ stroke: "var(--border)" }}
+                          tickLine={false}
+                          tickFormatter={(value: number) => `${currencySymbol}${Math.round(value)}`}
+                        />
+                        <Tooltip
+                          contentStyle={{ background: "var(--bg-raised)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+                          formatter={(value: any, name: any) => [`${currencySymbol}${Number(value).toFixed(2)}`, String(name)]}
+                          labelFormatter={(label) => format(parseISO(String(label)), "dd MMM yyyy")}
+                          cursor={{ fill: "rgba(124, 92, 252, 0.08)" }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} iconType="circle" />
+
+                        {barView === "all" ? (
+                          <Bar dataKey="total" name="Total" fill="url(#expenseBarGrad)" radius={[8, 8, 0, 0]} maxBarSize={42} />
+                        ) : (
+                          barCategorySeries.map((series) => (
+                            <Bar
+                              key={series.key}
+                              dataKey={series.key}
+                              name={series.name}
+                              fill={series.color}
+                              radius={[6, 6, 0, 0]}
+                              maxBarSize={34}
+                            />
+                          ))
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               )}
           </div>
         </div>
@@ -1194,43 +1208,69 @@ export function ExpenseTracker() {
             {lineData.length === 0
               ? empty("Add expenses to see trends")
               : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineView === "all" ? lineData : categoryLineData}>
-                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fill: "var(--text-muted)", fontSize: 12 }} axisLine={{ stroke: "var(--border)" }} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--text-muted)", fontSize: 12 }} axisLine={{ stroke: "var(--border)" }} tickLine={false} tickFormatter={(value: number) => `${currencySymbol}${Math.round(value)}`} />
-                    <Tooltip
-                      contentStyle={{ background: "var(--bg-raised)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
-                      formatter={(value: any, name: any) => [`${currencySymbol}${Number(value).toFixed(2)}`, String(name)]}
-                    />
-                    <Legend />
-
-                    {lineView === "all" ? (
-                      <Line
-                        type="monotone"
-                        dataKey="total"
-                        name="Total"
-                        stroke="#3B82F6"
-                        strokeWidth={2.5}
-                        dot={{ r: 3, fill: "#3B82F6", stroke: "var(--bg-surface)", strokeWidth: 2 }}
-                        activeDot={{ r: 5, fill: "#60A5FA" }}
-                      />
-                    ) : (
-                      categorySeries.map((series) => (
-                        <Line
-                          key={series.key}
-                          type="monotone"
-                          dataKey={series.key}
-                          name={series.name}
-                          stroke={series.color}
-                          strokeWidth={2}
-                          dot={false}
-                          activeDot={{ r: 4 }}
+                <div className="chart-scroll-wrapper">
+                  <div className="chart-inner-container">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={lineView === "all" ? lineData : categoryLineData} margin={{ left: 10, right: 10, top: 8, bottom: 8 }}>
+                        <defs>
+                          <linearGradient id="lineStrokeGrad" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor="#60A5FA" />
+                            <stop offset="100%" stopColor="#2563EB" />
+                          </linearGradient>
+                          <filter id="lineGlow">
+                            <feGaussianBlur stdDeviation="2.5" result="blur" />
+                            <feMerge>
+                              <feMergeNode in="blur" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
+                        </defs>
+                        <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} opacity={0.65} />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+                          axisLine={{ stroke: "var(--border)" }}
+                          tickLine={false}
+                          tickFormatter={(value: string) => format(parseISO(value), "MMM d")}
+                          minTickGap={18}
                         />
-                      ))
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
+                        <YAxis tick={{ fill: "var(--text-muted)", fontSize: 12 }} axisLine={{ stroke: "var(--border)" }} tickLine={false} tickFormatter={(value: number) => `${currencySymbol}${Math.round(value)}`} />
+                        <Tooltip
+                          contentStyle={{ background: "var(--bg-raised)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+                          formatter={(value: any, name: any) => [`${currencySymbol}${Number(value).toFixed(2)}`, String(name)]}
+                          labelFormatter={(label) => format(parseISO(String(label)), "dd MMM yyyy")}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} iconType="circle" />
+
+                        {lineView === "all" ? (
+                          <Line
+                            type="monotone"
+                            dataKey="total"
+                            name="Total"
+                            stroke="url(#lineStrokeGrad)"
+                            strokeWidth={3}
+                            filter="url(#lineGlow)"
+                            dot={{ r: 3, fill: "#3B82F6", stroke: "var(--bg-surface)", strokeWidth: 2 }}
+                            activeDot={{ r: 6, fill: "#60A5FA", stroke: "#1D4ED8", strokeWidth: 2 }}
+                          />
+                        ) : (
+                          categorySeries.map((series) => (
+                            <Line
+                              key={series.key}
+                              type="monotone"
+                              dataKey={series.key}
+                              name={series.name}
+                              stroke={series.color}
+                              strokeWidth={2}
+                              dot={false}
+                              activeDot={{ r: 4 }}
+                            />
+                          ))
+                        )}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               )}
           </div>
         </div>

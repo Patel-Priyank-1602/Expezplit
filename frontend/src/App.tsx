@@ -8,11 +8,12 @@ import {
 } from "@clerk/react";
 import { HomePage } from "./HomePage";
 import { ExpenseTracker } from "./ExpenseTracker";
+import { Analytics } from "./Analytics";
 import { Splitwise } from "./Splitwise";
 import { Notifications } from "./Notifications";
 import { supabase } from "./lib/supabase";
 
-type TabKey = "expense" | "splitwise";
+type TabKey = "expense" | "analytics" | "splitwise";
 type Theme = "dark" | "light";
 
 type ExpenseCsvRow = {
@@ -153,15 +154,14 @@ function App() {
     }
 
     const rows = ((expensesData ?? []) as ExpenseCsvRow[]).map((expense) => ({
-      id: expense.id,
+      date: expense.created_at,
       name: expense.name,
       category: expense.category,
       amount: Number(expense.amount).toFixed(2),
       currency: expense.currency ?? "INR",
-      created_at: expense.created_at,
     }));
 
-    const csv = rowsToCsv(["id", "name", "category", "amount", "currency", "created_at"], rows);
+    const csv = rowsToCsv(["date", "name", "category", "amount", "currency"], rows);
     triggerCsvDownload(`expenses_${stamp}.csv`, csv);
   };
 
@@ -243,23 +243,20 @@ function App() {
     if (groups.length === 0) {
       const emptyCsv = rowsToCsv(
         [
-          "group_id",
-          "group_name",
-          "group_currency",
-          "expense_id",
+          "group",
+          "type",
           "description",
-          "expense_amount",
-          "split_type",
-          "paid_by_member_id",
-          "paid_by_name",
-          "split_member_id",
-          "split_member_name",
+          "total_amount",
+          "paid_by",
+          "split_with",
           "split_amount",
-          "created_at",
+          "split_type",
+          "currency",
+          "date",
         ],
         [],
       );
-      triggerCsvDownload(`splitwise_${stamp}.csv`, emptyCsv);
+      triggerCsvDownload(`splitwise_transactions_${stamp}.csv`, emptyCsv);
       return;
     }
 
@@ -310,21 +307,21 @@ function App() {
       const paidBy = memberById.get(expense.paid_by_id);
       const expenseSplits = splitsByExpenseId.get(expense.id) ?? [];
 
+      const currency = group?.currency ?? "INR";
+      const type = expense.description === "Payment" ? "settlement" : "expense";
+
       if (expenseSplits.length === 0) {
         rows.push({
-          group_id: expense.group_id,
-          group_name: group?.name ?? "",
-          group_currency: group?.currency ?? "INR",
-          expense_id: expense.id,
+          group: group?.name ?? "",
+          type,
           description: expense.description,
-          expense_amount: Number(expense.amount).toFixed(2),
-          split_type: expense.split_type,
-          paid_by_member_id: expense.paid_by_id,
-          paid_by_name: paidBy?.name ?? "",
-          split_member_id: "",
-          split_member_name: "",
+          total_amount: Number(expense.amount).toFixed(2),
+          paid_by: paidBy?.name ?? "",
+          split_with: "",
           split_amount: "",
-          created_at: expense.created_at,
+          split_type: expense.split_type,
+          currency,
+          date: expense.created_at,
         });
         return;
       }
@@ -332,43 +329,37 @@ function App() {
       expenseSplits.forEach((split) => {
         const splitMember = memberById.get(split.member_id);
         rows.push({
-          group_id: expense.group_id,
-          group_name: group?.name ?? "",
-          group_currency: group?.currency ?? "INR",
-          expense_id: expense.id,
+          group: group?.name ?? "",
+          type,
           description: expense.description,
-          expense_amount: Number(expense.amount).toFixed(2),
-          split_type: expense.split_type,
-          paid_by_member_id: expense.paid_by_id,
-          paid_by_name: paidBy?.name ?? "",
-          split_member_id: split.member_id,
-          split_member_name: splitMember?.name ?? "",
+          total_amount: Number(expense.amount).toFixed(2),
+          paid_by: paidBy?.name ?? "",
+          split_with: splitMember?.name ?? "",
           split_amount: Number(split.amount).toFixed(2),
-          created_at: expense.created_at,
+          split_type: expense.split_type,
+          currency,
+          date: expense.created_at,
         });
       });
     });
 
     const csv = rowsToCsv(
       [
-        "group_id",
-        "group_name",
-        "group_currency",
-        "expense_id",
+        "group",
+        "type",
         "description",
-        "expense_amount",
-        "split_type",
-        "paid_by_member_id",
-        "paid_by_name",
-        "split_member_id",
-        "split_member_name",
+        "total_amount",
+        "paid_by",
+        "split_with",
         "split_amount",
-        "created_at",
+        "split_type",
+        "currency",
+        "date",
       ],
       rows,
     );
 
-    triggerCsvDownload(`splitwise_${stamp}.csv`, csv);
+    triggerCsvDownload(`splitwise_transactions_${stamp}.csv`, csv);
   };
 
   const handleDownloadAllCsv = async () => {
@@ -459,6 +450,19 @@ function App() {
                 Expense Tracker
               </button>
               <button
+                className={tab === "analytics" ? "tab-btn active" : "tab-btn"}
+                onClick={() => setTab("analytics")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+                  <line x1="18" y1="20" x2="18" y2="15"/>
+                  <line x1="14" y1="20" x2="14" y2="13"/>
+                  <line x1="10" y1="20" x2="10" y2="16"/>
+                </svg>
+                Analytics
+              </button>
+              <button
                 className={tab === "splitwise" ? "tab-btn active" : "tab-btn"}
                 onClick={() => setTab("splitwise")}
               >
@@ -473,6 +477,7 @@ function App() {
             </div>
 
             {tab === "expense" && <ExpenseTracker />}
+            {tab === "analytics" && <Analytics />}
             {tab === "splitwise" && <Splitwise />}
           </div>
         )}
