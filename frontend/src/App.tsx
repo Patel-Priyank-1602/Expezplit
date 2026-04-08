@@ -122,7 +122,14 @@ function App() {
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       aria-label="Toggle theme"
     >
-      {theme === "dark" ? "☀" : "☾"}
+      <div className="theme-toggle-inner">
+        <svg className="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M5.5 5.5l1.5 1.5"/><path d="M17 17l1.5 1.5"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M5.5 18.5l1.5-1.5"/><path d="M17 6.5l1.5-1.5"/>
+        </svg>
+        <svg className="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>
+        </svg>
+      </div>
     </button>
   );
 
@@ -388,8 +395,24 @@ function App() {
           </div>
           <div className="logo-text">ExpeZplit</div>
           <Show when="signed-in">
-            <button className="btn btn-secondary btn-sm" onClick={handleDownloadAllCsv} disabled={isExporting} style={{ marginLeft: 12 }}>
-              {isExporting ? "Preparing..." : "Download CSV"}
+            <button className="btn btn-secondary btn-sm download-csv-btn" onClick={handleDownloadAllCsv} disabled={isExporting}>
+              {isExporting ? (
+                <>
+                  <svg className="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  <span>Preparing...</span>
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  <span>Download CSV</span>
+                </>
+              )}
             </button>
           </Show>
         </div>
