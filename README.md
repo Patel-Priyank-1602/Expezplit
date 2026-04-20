@@ -42,6 +42,12 @@ Expezplit is built to handle every aspect of your shared and personal finances n
 - **Expense Updates:** Get notified automatically when a new expense is added to your group.
 - **Secure Invites:** Send group invitations via email reliably to onboard your remote friends quickly.
 
+### 6. 🔔 In-App Notifications
+- **Instant Alerts:** Get real-time notifications directly within the app for important events like new expenses, settled debts, or group updates.
+
+### 7. 📥 Data Export & Download
+- **Download Your Data:** Easily download and export your expense history, groups, and analytics data for personal record-keeping securely.
+
 ---
 
 ## 📂 Folder Structure
