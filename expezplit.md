@@ -12,6 +12,13 @@ Check out the live application on your preferred platform:
 
 ---
 
+## 📲 Download APK
+
+Install Expezplit directly on your Android device:
+- 📦 **[Download Expezplit.apk](apk_file/Expezplit.apk)**
+
+---
+
 ## ✨ Comprehensive Features
 
 Expezplit is built to handle every aspect of your shared and personal finances natively. Here is a detailed breakdown of what the application can do:
