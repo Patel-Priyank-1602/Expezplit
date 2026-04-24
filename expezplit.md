@@ -15,7 +15,7 @@ Check out the live application on your preferred platform:
 ## 📲 Download APK
 
 Install Expezplit directly on your Android device:
-- 📦 **[Download Expezplit.apk](apk_file/Expezplit.apk)**
+- 📦 **[Download Expezplit.apk](https://github.com/Patel-Priyank-1602/Expezplit/raw/main/apk_file/Expezplit.apk)**
 
 ---
 
