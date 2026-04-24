@@ -670,7 +670,78 @@ export function Analytics() {
   );
 
   if (loading) return (
-    <div className="fade-in" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, color: "var(--text-muted)" }}>Loading analytics...</div>
+    <div className="skeleton-analytics">
+      {/* Mode switch skeleton */}
+      <div className="skeleton-ana-mode">
+        <div className="skeleton skeleton-mode-btn" />
+        <div className="skeleton skeleton-mode-btn" />
+      </div>
+
+      {/* Section header skeleton */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div className="skeleton skeleton-circle" style={{ width: 28, height: 28 }} />
+        <div>
+          <div className="skeleton skeleton-line lg" style={{ width: 160 }} />
+          <div className="skeleton skeleton-line sm" style={{ width: 220, marginTop: 6 }} />
+        </div>
+      </div>
+
+      {/* KPI grid skeleton */}
+      <div className="skeleton-kpi-grid">
+        {[1, 2, 3, 4].map((i) => (
+          <div className="skeleton-kpi" key={i}>
+            <div className="skeleton skeleton-kpi-icon" />
+            <div className="skeleton-kpi-body">
+              <div className="skeleton skeleton-line sm" style={{ width: "55%" }} />
+              <div className="skeleton skeleton-line xl" style={{ width: "80%" }} />
+              <div className="skeleton skeleton-line sm" style={{ width: "65%" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Metrics bar skeleton */}
+      <div className="skeleton-metrics-bar">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div className="skeleton-metric" key={i}>
+            <div className="skeleton skeleton-circle" style={{ width: 28, height: 28 }} />
+            <div className="skeleton skeleton-line xl" style={{ width: "50%" }} />
+            <div className="skeleton skeleton-line sm" style={{ width: "70%" }} />
+          </div>
+        ))}
+      </div>
+
+      {/* Chart grids skeleton */}
+      <div className="skeleton-ana-charts">
+        <div className="skeleton-chart-card">
+          <div className="skeleton skeleton-line lg" style={{ width: "50%" }} />
+          <div className="skeleton skeleton-line sm" style={{ width: "35%" }} />
+          <div className="skeleton-chart-area" style={{ minHeight: 180 }}>
+            {[55, 40, 70, 50, 65, 45].map((h, i) => (
+              <div key={i} className="skeleton skeleton-bar" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+        </div>
+        <div className="skeleton-chart-card">
+          <div className="skeleton skeleton-line lg" style={{ width: "55%" }} />
+          <div className="skeleton skeleton-line sm" style={{ width: "40%" }} />
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flex: 1 }}>
+            <div className="skeleton-chart-donut" />
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom chart skeleton */}
+      <div className="skeleton-chart-card">
+        <div className="skeleton skeleton-line lg" style={{ width: "45%" }} />
+        <div className="skeleton skeleton-line sm" style={{ width: "30%" }} />
+        <div className="skeleton-chart-area" style={{ minHeight: 160 }}>
+          {[45, 60, 35, 75, 50, 40, 65, 55, 70, 45, 55, 60].map((h, i) => (
+            <div key={i} className="skeleton skeleton-bar" style={{ height: `${h}%` }} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 
   return (

@@ -781,8 +781,66 @@ export function ExpenseTracker() {
 
   if (loading) {
     return (
-      <div className="fade-in" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, color: "var(--text-muted)" }}>
-        Loading expenses...
+      <div className="skeleton-expense">
+        {/* Currency info skeleton */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div className="skeleton skeleton-line sm" style={{ width: "280px", maxWidth: "60%" }} />
+          <div className="skeleton skeleton-rect" style={{ width: 100, height: 34 }} />
+        </div>
+
+        {/* Filter pills skeleton */}
+        <div className="skeleton skeleton-rect" style={{ width: 260, height: 32 }} />
+
+        {/* Stats row skeleton */}
+        <div className="skeleton-stats-row">
+          {[1, 2, 3].map((i) => (
+            <div className="skeleton-stat" key={i}>
+              <div className="skeleton skeleton-line sm" style={{ width: "55%" }} />
+              <div className="skeleton skeleton-line xl" style={{ width: "75%" }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Charts top row: Form + Pie */}
+        <div className="skeleton-charts-row">
+          {/* Add expense form skeleton */}
+          <div className="skeleton-form-card">
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div className="skeleton skeleton-circle" style={{ width: 24, height: 24 }} />
+              <div className="skeleton skeleton-line lg" style={{ width: "40%" }} />
+            </div>
+            <div className="skeleton skeleton-input" />
+            <div className="skeleton skeleton-input" />
+            <div className="skeleton skeleton-input" />
+            <div className="skeleton skeleton-btn" />
+          </div>
+
+          {/* Pie chart skeleton */}
+          <div className="skeleton-chart-card">
+            <div className="skeleton skeleton-line lg" style={{ width: "55%" }} />
+            <div className="skeleton skeleton-line sm" style={{ width: "40%" }} />
+            <div className="skeleton skeleton-rect" style={{ width: "80%", height: 30 }} />
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flex: 1 }}>
+              <div className="skeleton-chart-donut" />
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom chart skeleton (bar chart) */}
+        <div className="skeleton-chart-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div className="skeleton skeleton-line lg" style={{ width: 180 }} />
+              <div className="skeleton skeleton-line sm" style={{ width: 130, marginTop: 6 }} />
+            </div>
+            <div className="skeleton skeleton-rect" style={{ width: 200, height: 30 }} />
+          </div>
+          <div className="skeleton-chart-area" style={{ minHeight: 180 }}>
+            {[50, 35, 70, 60, 45, 80, 55, 40, 65, 75, 50, 60].map((h, i) => (
+              <div key={i} className="skeleton skeleton-bar" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

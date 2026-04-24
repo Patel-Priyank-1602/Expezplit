@@ -1107,8 +1107,62 @@ export function Splitwise() {
 
   if (loading) {
     return (
-      <div className="fade-in" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, color: "var(--text-muted)" }}>
-        Loading groups...
+      <div className="skeleton-splitwise">
+        {/* Sub-tab bar skeleton */}
+        <div className="skeleton-tab-bar">
+          <div className="skeleton skeleton-tab-btn" style={{ width: 110 }} />
+          <div className="skeleton skeleton-tab-btn" style={{ width: 110 }} />
+        </div>
+
+        {/* Section header skeleton */}
+        <div className="skeleton skeleton-line lg" style={{ width: 140 }} />
+
+        {/* Groups grid skeleton */}
+        <div className="skeleton-group-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <div className="skeleton-group-card" key={i}>
+              <div className="skeleton skeleton-line lg" style={{ width: "65%" }} />
+              <div className="skeleton skeleton-line sm" style={{ width: "40%" }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Group detail skeleton (currency row + expense form + balance) */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 8 }}>
+          <div className="skeleton skeleton-line sm" style={{ width: "250px", maxWidth: "50%" }} />
+          <div className="skeleton skeleton-rect" style={{ width: 100, height: 34 }} />
+        </div>
+
+        <div className="skeleton-charts-row" style={{ marginTop: 4 }}>
+          {/* Expense form skeleton */}
+          <div className="skeleton-form-card">
+            <div className="skeleton skeleton-line lg" style={{ width: "50%" }} />
+            <div className="skeleton skeleton-input" />
+            <div className="skeleton skeleton-input" />
+            <div style={{ display: "flex", gap: 8 }}>
+              <div className="skeleton skeleton-btn" />
+              <div className="skeleton skeleton-btn" style={{ width: 80 }} />
+            </div>
+          </div>
+
+          {/* Balances skeleton */}
+          <div className="skeleton-chart-card" style={{ minHeight: 200 }}>
+            <div className="skeleton skeleton-line lg" style={{ width: "45%" }} />
+            <div className="skeleton skeleton-line sm" style={{ width: "35%" }} />
+            <div className="skeleton-expense-list">
+              {[1, 2, 3].map((i) => (
+                <div className="skeleton-expense-item" key={i}>
+                  <div className="skeleton skeleton-circle" style={{ width: 34, height: 34 }} />
+                  <div className="skeleton-expense-item-body">
+                    <div className="skeleton skeleton-line md" style={{ width: "70%" }} />
+                    <div className="skeleton skeleton-line sm" style={{ width: "45%" }} />
+                  </div>
+                  <div className="skeleton skeleton-rect" style={{ width: 60, height: 28 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

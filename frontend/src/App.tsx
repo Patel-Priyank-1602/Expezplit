@@ -443,16 +443,43 @@ function App() {
       {/* Main */}
       <main style={{ flex: 1 }}>
         {!isLoaded && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: 300,
-              color: "var(--text-muted)",
-            }}
-          >
-            Loading...
+          <div className="skeleton-app-loading">
+            {/* Skeleton tab bar */}
+            <div className="skeleton-tab-bar">
+              <div className="skeleton skeleton-tab-btn" />
+              <div className="skeleton skeleton-tab-btn" />
+              <div className="skeleton skeleton-tab-btn" />
+            </div>
+
+            {/* Skeleton stats row */}
+            <div className="skeleton-stats-row">
+              {[1, 2, 3].map((i) => (
+                <div className="skeleton-stat" key={i}>
+                  <div className="skeleton skeleton-line sm" style={{ width: "60%" }} />
+                  <div className="skeleton skeleton-line xl" style={{ width: "80%" }} />
+                </div>
+              ))}
+            </div>
+
+            {/* Skeleton chart cards */}
+            <div className="skeleton-charts-row">
+              <div className="skeleton-chart-card">
+                <div className="skeleton skeleton-line lg" style={{ width: "50%" }} />
+                <div className="skeleton skeleton-line sm" style={{ width: "35%" }} />
+                <div className="skeleton-chart-area">
+                  {[65, 40, 80, 55, 70, 45, 60].map((h, i) => (
+                    <div key={i} className="skeleton skeleton-bar" style={{ height: `${h}%` }} />
+                  ))}
+                </div>
+              </div>
+              <div className="skeleton-chart-card">
+                <div className="skeleton skeleton-line lg" style={{ width: "55%" }} />
+                <div className="skeleton skeleton-line sm" style={{ width: "40%" }} />
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flex: 1 }}>
+                  <div className="skeleton-chart-donut" />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

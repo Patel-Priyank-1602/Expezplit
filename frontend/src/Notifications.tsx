@@ -436,7 +436,19 @@ export function Notifications() {
 
           <div className="notif-panel-body">
             {loading && (
-              <div className="notif-empty">Loading...</div>
+              <div className="skeleton-notif">
+                {[1, 2, 3].map((i) => (
+                  <div className="skeleton-notif-card" key={i}>
+                    <div className="skeleton skeleton-notif-icon" />
+                    <div className="skeleton-notif-body">
+                      <div className="skeleton skeleton-line md" style={{ width: "45%" }} />
+                      <div className="skeleton skeleton-line sm" style={{ width: "85%" }} />
+                      <div className="skeleton skeleton-line sm" style={{ width: "60%" }} />
+                      <div className="skeleton skeleton-line sm" style={{ width: "30%" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {!loading && notifications.length === 0 && (

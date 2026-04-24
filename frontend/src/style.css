@@ -2446,6 +2446,377 @@ p  { color: var(--text-secondary); line-height: 1.65; }
 .fade-in { animation: fadeIn 0.3s ease-out; }
 
 /* ══════════════════════════
+   SKELETON LOADING
+   ══════════════════════════ */
+
+/* ── Shimmer animation ── */
+@keyframes skeletonShimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Base skeleton element ── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-raised) 25%,
+    var(--bg-hover) 37%,
+    var(--bg-raised) 63%
+  );
+  background-size: 800px 100%;
+  animation: skeletonShimmer 1.8s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Skeleton variants ── */
+.skeleton-line {
+  height: 14px;
+  border-radius: 4px;
+}
+
+.skeleton-line.sm { height: 10px; }
+.skeleton-line.md { height: 14px; }
+.skeleton-line.lg { height: 20px; }
+.skeleton-line.xl { height: 28px; }
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+.skeleton-rect {
+  border-radius: var(--radius);
+}
+
+.skeleton-card {
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 22px;
+  animation: skeletonPulse 2s ease-in-out infinite;
+}
+
+/* ── App initial loading skeleton ── */
+.skeleton-app-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 28px 48px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.skeleton-tab-bar {
+  display: inline-flex;
+  gap: 6px;
+  padding: 3px;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.skeleton-tab-btn {
+  width: 130px;
+  height: 38px;
+  border-radius: 7px;
+}
+
+.skeleton-tab-btn:nth-child(1) { animation-delay: 0ms; }
+.skeleton-tab-btn:nth-child(2) { animation-delay: 100ms; }
+.skeleton-tab-btn:nth-child(3) { animation-delay: 200ms; }
+
+/* ── Expense Tracker skeleton ── */
+.skeleton-expense {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.skeleton-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.skeleton-stat {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.skeleton-chart-card {
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 300px;
+}
+
+.skeleton-chart-area {
+  flex: 1;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 12px 8px 8px;
+}
+
+.skeleton-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  min-width: 12px;
+}
+
+.skeleton-chart-donut {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  margin: 20px auto;
+  border: 18px solid var(--bg-raised);
+  position: relative;
+  animation: skeletonPulse 2s ease-in-out infinite;
+}
+
+.skeleton-chart-donut::after {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  border: 18px solid transparent;
+  border-top-color: var(--bg-hover);
+  animation: skeletonShimmer 1.8s ease-in-out infinite;
+}
+
+.skeleton-form-card {
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-input {
+  height: 40px;
+  border-radius: 8px;
+}
+
+.skeleton-btn {
+  height: 40px;
+  width: 120px;
+  border-radius: 8px;
+}
+
+.skeleton-expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-expense-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+}
+
+.skeleton-expense-item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Analytics skeleton ── */
+.skeleton-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.skeleton-ana-mode {
+  display: flex;
+  gap: 4px;
+  width: fit-content;
+}
+
+.skeleton-mode-btn {
+  width: 120px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.skeleton-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.skeleton-kpi {
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.skeleton-kpi-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.skeleton-kpi-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-metrics-bar {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+}
+
+.skeleton-metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.skeleton-ana-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ── Splitwise skeleton ── */
+.skeleton-splitwise {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.skeleton-group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.skeleton-group-card {
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 80px;
+}
+
+/* ── Notifications skeleton ── */
+.skeleton-notif {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.skeleton-notif-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+.skeleton-notif-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.skeleton-notif-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Responsive adjustments ── */
+@media (max-width: 640px) {
+  .skeleton-stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-charts-row,
+  .skeleton-ana-charts {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .skeleton-metrics-bar {
+    flex-wrap: wrap;
+  }
+
+  .skeleton-group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-tab-btn {
+    width: 100px;
+  }
+}
+
+@media (max-width: 400px) {
+  .skeleton-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ══════════════════════════
    UPI Payment Feature
    ══════════════════════════ */
 
