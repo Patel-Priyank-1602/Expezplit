@@ -8,7 +8,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recha
 import { QRCodeSVG } from "qrcode.react";
 import { Html5Qrcode } from "html5-qrcode";
 
-const COLORS = ["#7C5CFC", "#22C55E", "#F59E0B", "#EF4444", "#3B82F6", "#8B5CF6"];
+const COLORS = ["#FDE406", "#22C55E", "#F59E0B", "#EF4444", "#3B82F6", "#8B5CF6"];
 
 type CurrencyCode = string;
 type ExchangeRatesApiResponse = {
@@ -178,6 +178,7 @@ export function Splitwise() {
   const [showScanner, setShowScanner] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const groupDetailRef = useRef<HTMLDivElement | null>(null);
   const scannerContainerId = "qr-scanner-container";
 
   const hasSelectedRate = currencyCode === BASE_CURRENCY || (conversionRates[currencyCode] ?? 0) > 0;
@@ -282,9 +283,9 @@ export function Splitwise() {
 
     const onEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-         setIsCurrencyMenuOpen(false);
-         setIsPaidByMenuOpen(false);
-         setIsSplitTypeMenuOpen(false);
+        setIsCurrencyMenuOpen(false);
+        setIsPaidByMenuOpen(false);
+        setIsSplitTypeMenuOpen(false);
       }
     };
 
@@ -461,6 +462,13 @@ export function Splitwise() {
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
+  /* Auto-select first group on initial load */
+  useEffect(() => {
+    if (groups.length > 0 && !selectedGroupId) {
+      applyActiveGroup(groups[0]);
+    }
+  }, [groups, selectedGroupId, applyActiveGroup]);
+
   /* ─── Sync user's avatar to database on load ─── */
   useEffect(() => {
     async function syncAvatarUrl() {
@@ -563,8 +571,8 @@ export function Splitwise() {
 
     const g = groups.find((x) => x.id === id);
     if (!g || !isAdmin(g)) {
-       window.alert("You can only delete groups you created.");
-       return;
+      window.alert("You can only delete groups you created.");
+      return;
     }
 
     if (!window.confirm(`Delete the group "${name}"? This will also delete all members and expenses.`)) return;
@@ -783,7 +791,7 @@ export function Splitwise() {
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
+        scannerRef.current.stop().catch(() => { });
         scannerRef.current = null;
       }
     };
@@ -1010,7 +1018,7 @@ export function Splitwise() {
   /* ─── Balances ─── */
   const { balances, optimizedDebts } = useMemo(() => {
     if (!currentGroup) return { balances: new Map<string, number>(), optimizedDebts: [] };
-    
+
     // 1. Calculate net balance for each member
     const bal = new Map<string, number>();
     currentGroup.members.forEach((m) => bal.set(m.id, 0));
@@ -1101,9 +1109,46 @@ export function Splitwise() {
     if (memberEmail && userEmail && memberEmail === userEmail && user?.imageUrl) {
       return user.imageUrl;
     }
-    
+
     return null;
   }, [userEmail, user?.imageUrl]);
+
+  const currentSymbol = getCurrencySymbol(currencyCode);
+  const currentRate = conversionRates[currencyCode] ?? 1;
+
+  /* ─── Overall Groups Summary (Total to Pay & Total to Receive across ALL Groups) ─── */
+  const overallGroupTotals = useMemo(() => {
+    let totalToPay = 0;
+    let totalToReceive = 0;
+
+    groups.forEach((g) => {
+      // Use same balance map logic as per-group computation (lines 1022-1027)
+      const bal = new Map<string, number>();
+      g.members.forEach((m) => bal.set(m.id, 0));
+      g.expenses.forEach((exp) => {
+        bal.set(exp.paid_by_id, (bal.get(exp.paid_by_id) ?? 0) + exp.amount);
+        exp.splits.forEach((s) => bal.set(s.member_id, (bal.get(s.member_id) ?? 0) - s.amount));
+      });
+
+      // Find current user using email match (same as isMe function)
+      const currentMember = userEmail
+        ? g.members.find((m) => m.email.toLowerCase() === userEmail)
+        : undefined;
+
+      if (!currentMember) return;
+
+      const memberNet = bal.get(currentMember.id) ?? 0;
+
+      if (memberNet > 0.01) {
+        totalToReceive += memberNet;
+      } else if (memberNet < -0.01) {
+        totalToPay += Math.abs(memberNet);
+      }
+    });
+
+    const netBalance = totalToReceive - totalToPay;
+    return { totalToPay, totalToReceive, netBalance };
+  }, [groups, userEmail]);
 
   if (loading) {
     return (
@@ -1167,29 +1212,31 @@ export function Splitwise() {
     );
   }
 
+
+
   return (
     <div className="fade-in">
-      <div className="tab-bar">
-        <button 
+      <div className="tab-bar splitwise-tab-bar">
+        <button
           className={`tab-btn ${activeTab === "your_groups" ? "active" : ""}`}
           onClick={() => setActiveTab("your_groups")}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
           Your Groups
         </button>
-        <button 
+        <button
           className={`tab-btn ${activeTab === "create_join" ? "active" : ""}`}
           onClick={() => setActiveTab("create_join")}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="16"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="16" />
+            <line x1="8" y1="12" x2="16" y2="12" />
           </svg>
           Create / Join
         </button>
@@ -1204,39 +1251,84 @@ export function Splitwise() {
             </div>
           ) : (
             <div className="group-cards-container">
-          <div className="group-cards-header">
-            <h2 className="group-cards-title">Your Groups</h2>
-          </div>
-          <div className="group-cards-grid">
-            {groups.map((g, idx) => {
-              const bgClass = `group-bg-${idx % 8}`;
-              const isSelected = g.id === selectedGroupId;
-              
-              return (
-                <div 
-                  key={g.id} 
-                  className={`group-card-item ${isSelected ? 'active' : ''} ${bgClass}`}
-                  onClick={() => selectGroup(g.id)}
-                >
-                  <div className="group-card-content">
-                    <h3 className="group-card-name">{g.name}</h3>
-                    <div className="group-card-members">{g.members.length} member{g.members.length !== 1 ? 's' : ''}</div>
+              {/* Overall Groups Balance Summary Cards */}
+              <div className="overall-summary-row">
+                <div className="overall-card pay-card">
+                  <div className="overall-card-header">
+                    <span className="overall-card-icon pay-icon">↓</span>
+                    <span className="overall-card-label">Total You Need to Pay</span>
                   </div>
-                  {isAdmin(g) && (
-                    <button 
-                      className="group-delete-btn" 
-                      onClick={(e) => deleteGroup(e, g.id, g.name)}
-                      title="Delete group"
-                      disabled={isDeletingGroups}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
-                  )}
+                  <div className="overall-card-value text-red">
+                    {currencySymbol}{convertFromBase(overallGroupTotals.totalToPay).toFixed(2)}
+                  </div>
+                  <div className="overall-card-sub">Across all {groups.length} group{groups.length !== 1 ? "s" : ""}</div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+
+                <div className="overall-card receive-card">
+                  <div className="overall-card-header">
+                    <span className="overall-card-icon receive-icon">↑</span>
+                    <span className="overall-card-label">Total You Need to Receive</span>
+                  </div>
+                  <div className="overall-card-value text-green">
+                    {currencySymbol}{convertFromBase(overallGroupTotals.totalToReceive).toFixed(2)}
+                  </div>
+                  <div className="overall-card-sub">Across all {groups.length} group{groups.length !== 1 ? "s" : ""}</div>
+                </div>
+
+                <div className="overall-card net-card">
+                  <div className="overall-card-header">
+                    <span className="overall-card-icon net-icon">⚖</span>
+                    <span className="overall-card-label">Net Group Standing</span>
+                  </div>
+                  <div className={`overall-card-value ${overallGroupTotals.netBalance >= 0 ? "text-green" : "text-red"}`}>
+                    {overallGroupTotals.netBalance >= 0 ? "+" : "-"}{currencySymbol}{convertFromBase(Math.abs(overallGroupTotals.netBalance)).toFixed(2)}
+                  </div>
+                  <div className="overall-card-sub">Overall net balance</div>
+                </div>
+              </div>
+
+              <div className="group-cards-header">
+                <h2 className="group-cards-title">Your Groups</h2>
+              </div>
+
+              <div className="group-cards-grid">
+                {groups.map((g, idx) => {
+                  const bgClass = `group-bg-${idx % 8}`;
+                  const isSelected = g.id === selectedGroupId;
+
+                  return (
+                    <div
+                      key={g.id}
+                      className={`group-card-item ${isSelected ? 'active' : ''} ${bgClass}`}
+                      onClick={() => {
+                        applyActiveGroup(isSelected ? null : g);
+                        if (!isSelected) {
+                          // Scroll to group detail on mobile after a short delay for render
+                          setTimeout(() => {
+                            groupDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 100);
+                        }
+                      }}
+                    >
+                      <div className="group-card-content">
+                        <h3 className="group-card-name">{g.name}</h3>
+                        <div className="group-card-members">{g.members.length} member{g.members.length !== 1 ? 's' : ''}</div>
+                      </div>
+                      {isAdmin(g) && (
+                        <button
+                          className="group-delete-btn"
+                          onClick={(e) => deleteGroup(e, g.id, g.name)}
+                          title="Delete group"
+                          disabled={isDeletingGroups}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -1244,147 +1336,147 @@ export function Splitwise() {
       {activeTab === "create_join" && (
         <div className="group-top-row fade-in">
           <div className="card">
-          <div className="card-title" style={{ marginBottom: 14 }}>Create a new group</div>
-          <form onSubmit={createGroup}>
-            <div className="form-row">
-              <div className="field">
-                <label className="field-label">Group name</label>
-                <input className="field-input" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Trip, Roommates, Office lunch..." />
-              </div>
-              <div className="field" style={{ flex: "0 0 auto" }}>
-                <label className="field-label hidden-mobile">&nbsp;</label>
-                <button type="submit" className="btn btn-primary" style={{ padding: "10px 20px" }}>Create</button>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        <div className="card">
-          <div className="card-title" style={{ marginBottom: 14 }}>Join a group</div>
-          {!showJoinUpiStep ? (
-            <>
-            <form onSubmit={handleJoinGroup}>
+            <div className="card-title" style={{ marginBottom: 14 }}>Create a new group</div>
+            <form onSubmit={createGroup}>
               <div className="form-row">
                 <div className="field">
-                  <label className="field-label">Invite code</label>
-                  <input
-                    className="field-input"
-                    value={joinCode}
-                    onChange={(e) => { setJoinCode(e.target.value); setJoinError(null); }}
-                    placeholder="Enter 9-character invite code..."
-                    maxLength={12}
-                    autoComplete="off"
-                  />
+                  <label className="field-label">Group name</label>
+                  <input className="field-input" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Trip, Roommates, Office lunch..." />
                 </div>
                 <div className="field" style={{ flex: "0 0 auto" }}>
                   <label className="field-label hidden-mobile">&nbsp;</label>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button type="submit" className="btn btn-secondary" disabled={joinLoading || !joinCode.trim()} style={{ padding: "10px 16px" }}>
-                      {joinLoading ? "Joining..." : "Join"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-scan"
-                      onClick={startScanner}
-                      title="Scan QR Code"
-                      style={{ padding: "10px 12px" }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-                        <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
-                        <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-                        <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
-                        <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-                        <rect x="7" y="7" width="10" height="10" rx="1"/>
-                      </svg>
-                      Scan
-                    </button>
-                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ padding: "10px 20px" }}>Create</button>
                 </div>
               </div>
-              {joinError && <div style={{ marginTop: 8, fontSize: 13, color: "var(--red, #ef4444)" }}>{joinError}</div>}
             </form>
+          </div>
 
-            {/* QR Scanner Modal */}
-            {showScanner && (
-              <div className="scanner-modal-backdrop" onClick={stopScanner}>
-                <div className="scanner-modal" onClick={(e) => e.stopPropagation()}>
-                  <div className="scanner-header">
-                    <div className="scanner-title">Scan QR Code</div>
-                    <button className="btn btn-secondary btn-sm" onClick={stopScanner}>Close</button>
-                  </div>
-                  <div className="scanner-body">
-                    <div className="scanner-viewport">
-                      <div id={scannerContainerId}></div>
-                      <div className="scanner-frame">
-                        <div className="scanner-corner tl"/>
-                        <div className="scanner-corner tr"/>
-                        <div className="scanner-corner bl"/>
-                        <div className="scanner-corner br"/>
+          <div className="card">
+            <div className="card-title" style={{ marginBottom: 14 }}>Join a group</div>
+            {!showJoinUpiStep ? (
+              <>
+                <form onSubmit={handleJoinGroup}>
+                  <div className="form-row">
+                    <div className="field">
+                      <label className="field-label">Invite code</label>
+                      <input
+                        className="field-input"
+                        value={joinCode}
+                        onChange={(e) => { setJoinCode(e.target.value); setJoinError(null); }}
+                        placeholder="Enter 9-character invite code..."
+                        maxLength={12}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="field" style={{ flex: "0 0 auto" }}>
+                      <label className="field-label hidden-mobile">&nbsp;</label>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button type="submit" className="btn btn-secondary" disabled={joinLoading || !joinCode.trim()} style={{ padding: "10px 16px" }}>
+                          {joinLoading ? "Joining..." : "Join"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-scan"
+                          onClick={startScanner}
+                          title="Scan QR Code"
+                          style={{ padding: "10px 12px" }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                            <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                            <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                            <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                            <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                            <rect x="7" y="7" width="10" height="10" rx="1" />
+                          </svg>
+                          Scan
+                        </button>
                       </div>
                     </div>
-                    {scannerError && (
-                      <div className="scanner-error">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                        {scannerError}
+                  </div>
+                  {joinError && <div style={{ marginTop: 8, fontSize: 13, color: "var(--red, #ef4444)" }}>{joinError}</div>}
+                </form>
+
+                {/* QR Scanner Modal */}
+                {showScanner && (
+                  <div className="scanner-modal-backdrop" onClick={stopScanner}>
+                    <div className="scanner-modal" onClick={(e) => e.stopPropagation()}>
+                      <div className="scanner-header">
+                        <div className="scanner-title">Scan QR Code</div>
+                        <button className="btn btn-secondary btn-sm" onClick={stopScanner}>Close</button>
                       </div>
-                    )}
-                    <div className="scanner-hint">Point your camera at a group QR code</div>
+                      <div className="scanner-body">
+                        <div className="scanner-viewport">
+                          <div id={scannerContainerId}></div>
+                          <div className="scanner-frame">
+                            <div className="scanner-corner tl" />
+                            <div className="scanner-corner tr" />
+                            <div className="scanner-corner bl" />
+                            <div className="scanner-corner br" />
+                          </div>
+                        </div>
+                        {scannerError && (
+                          <div className="scanner-error">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
+                            {scannerError}
+                          </div>
+                        )}
+                        <div className="scanner-hint">Point your camera at a group QR code</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="upi-join-step">
+                <div style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 12 }}>
+                  Enter your UPI ID so others can pay you directly. You can skip this and add it later.
+                </div>
+                <div className="form-row">
+                  <div className="field">
+                    <label className="field-label">Your UPI ID</label>
+                    <input
+                      className="field-input"
+                      value={joinUpiId}
+                      onChange={(e) => setJoinUpiId(e.target.value)}
+                      placeholder="yourname@upi or 9876543210@paytm"
+                      autoComplete="off"
+                    />
                   </div>
                 </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={finalizeJoinGroup}
+                    disabled={joinLoading}
+                  >
+                    {joinLoading ? "Joining..." : "Join Group"}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => { setJoinUpiId(""); finalizeJoinGroup(); }}
+                    disabled={joinLoading}
+                  >
+                    Skip
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => { setShowJoinUpiStep(false); setPendingJoinGroupId(null); }}
+                    disabled={joinLoading}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {joinError && <div style={{ marginTop: 8, fontSize: 13, color: "var(--red, #ef4444)" }}>{joinError}</div>}
               </div>
             )}
-            </>
-          ) : (
-            <div className="upi-join-step">
-              <div style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 12 }}>
-                Enter your UPI ID so others can pay you directly. You can skip this and add it later.
-              </div>
-              <div className="form-row">
-                <div className="field">
-                  <label className="field-label">Your UPI ID</label>
-                  <input
-                    className="field-input"
-                    value={joinUpiId}
-                    onChange={(e) => setJoinUpiId(e.target.value)}
-                    placeholder="yourname@upi or 9876543210@paytm"
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={finalizeJoinGroup}
-                  disabled={joinLoading}
-                >
-                  {joinLoading ? "Joining..." : "Join Group"}
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => { setJoinUpiId(""); finalizeJoinGroup(); }}
-                  disabled={joinLoading}
-                >
-                  Skip
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => { setShowJoinUpiStep(false); setPendingJoinGroupId(null); }}
-                  disabled={joinLoading}
-                >
-                  Cancel
-                </button>
-              </div>
-              {joinError && <div style={{ marginTop: 8, fontSize: 13, color: "var(--red, #ef4444)" }}>{joinError}</div>}
-            </div>
-          )}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Group detail */}
       {activeTab === "your_groups" && currentGroup && (
         <>
-          {/* Invite code bar */}
+          <div ref={groupDetailRef} />
           <div className="invite-code-bar">
             <div className="invite-code-main">
               <span className="invite-code-label">Invite Code</span>
@@ -1410,11 +1502,11 @@ export function Splitwise() {
                     title={showQr ? "Hide QR Code" : "Show QR Code"}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="2" width="8" height="8" rx="1"/>
-                      <rect x="14" y="2" width="8" height="8" rx="1"/>
-                      <rect x="2" y="14" width="8" height="8" rx="1"/>
-                      <rect x="14" y="14" width="4" height="4" rx="0.5"/>
-                      <path d="M22 14h-2v4h-4v4h4a2 2 0 0 0 2-2v-4z"/>
+                      <rect x="2" y="2" width="8" height="8" rx="1" />
+                      <rect x="14" y="2" width="8" height="8" rx="1" />
+                      <rect x="2" y="14" width="8" height="8" rx="1" />
+                      <rect x="14" y="14" width="4" height="4" rx="0.5" />
+                      <path d="M22 14h-2v4h-4v4h4a2 2 0 0 0 2-2v-4z" />
                     </svg>
                     {showQr ? "Hide QR" : "QR Code"}
                   </button>
@@ -1528,7 +1620,7 @@ export function Splitwise() {
                             navigator.share({
                               title: `Join ${currentGroup.name}`,
                               text: `Join my group "${currentGroup.name}" on ExpeZplit!\nInvite code: ${currentGroup.invite_code}\nLink: ${joinUrl}`,
-                            }).catch(() => {});
+                            }).catch(() => { });
                           } else {
                             navigator.clipboard.writeText(`Join my group "${currentGroup.name}" on ExpeZplit!\nInvite code: ${currentGroup.invite_code}\nLink: ${joinUrl}`);
                             alert("Invite link copied to clipboard!");
@@ -1536,7 +1628,7 @@ export function Splitwise() {
                         }
                       }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>
                       Share
                     </button>
                     <button
@@ -1562,7 +1654,7 @@ export function Splitwise() {
                         img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
                       }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                       Download
                     </button>
                   </div>
@@ -1576,8 +1668,8 @@ export function Splitwise() {
               {ratesError
                 ? ratesError
                 : activeCurrencyCode === BASE_CURRENCY
-                ? `Base currency ${BASE_CURRENCY} | Live rates ${ratesLoading ? "updating..." : "active"}`
-                : `1 ${BASE_CURRENCY} = ${selectedRate.toFixed(4)} ${activeCurrencyCode}${lastRateUpdateText ? ` | Updated ${lastRateUpdateText}` : ""}`}
+                  ? `Base currency ${BASE_CURRENCY} | Live rates ${ratesLoading ? "updating..." : "active"}`
+                  : `1 ${BASE_CURRENCY} = ${selectedRate.toFixed(4)} ${activeCurrencyCode}${lastRateUpdateText ? ` | Updated ${lastRateUpdateText}` : ""}`}
             </div>
 
             <div className="currency-picker" ref={currencyMenuRef}>
@@ -1686,427 +1778,427 @@ export function Splitwise() {
           </div>
 
           <div className="split-cols">
-          {/* Left: Members */}
-          <div className="card">
-            <div className="card-title" style={{ marginBottom: 14 }}>Members</div>
+            {/* Left: Members */}
+            <div className="card">
+              <div className="card-title" style={{ marginBottom: 14 }}>Members</div>
 
-            <ul className="member-list">
-              {currentGroup.members.length === 0 ? (
-                <li style={{ textAlign: "center", padding: 20, color: "var(--text-muted)", fontSize: 14 }}>
-                  No members found in this group.
-                </li>
-              ) : (
-                currentGroup.members.map((m) => {
-                  const b = balances.get(m.id) ?? 0;
-                  const avatarUrl = getMemberAvatarUrl(m);
-                  return (
-                    <li key={m.id} className="member-item" style={{ flexWrap: "wrap", justifyContent: "space-between", gap: 12 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 auto", minWidth: 200 }}>
-                        <div className="avatar">
-                          {avatarUrl ? (
-                            <img className="avatar-img" src={avatarUrl} alt={`${m.name} avatar`} loading="lazy" />
-                          ) : (
-                            initial(m.name)
-                          )}
-                        </div>
-                        <div className="member-info">
-                          <div className="member-name">
-                            {m.name}
-                            {isMe(m) && <span className="you-tag">You</span>}
+              <ul className="member-list">
+                {currentGroup.members.length === 0 ? (
+                  <li style={{ textAlign: "center", padding: 20, color: "var(--text-muted)", fontSize: 14 }}>
+                    No members found in this group.
+                  </li>
+                ) : (
+                  currentGroup.members.map((m) => {
+                    const b = balances.get(m.id) ?? 0;
+                    const avatarUrl = getMemberAvatarUrl(m);
+                    return (
+                      <li key={m.id} className="member-item" style={{ flexWrap: "wrap", justifyContent: "space-between", gap: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 auto", minWidth: 200 }}>
+                          <div className="avatar">
+                            {avatarUrl ? (
+                              <img className="avatar-img" src={avatarUrl} alt={`${m.name} avatar`} loading="lazy" />
+                            ) : (
+                              initial(m.name)
+                            )}
                           </div>
-                          <div className="member-email">{m.email}</div>
-                          {m.upi_id && (
-                            <div className="member-upi">
-                              <span>{m.upi_id}</span>
+                          <div className="member-info">
+                            <div className="member-name">
+                              {m.name}
+                              {isMe(m) && <span className="you-tag">You</span>}
                             </div>
-                          )}
-                          {isMe(m) && !editingMyUpi && (
-                            <button
-                              className="upi-edit-btn"
-                              onClick={() => { setMyUpiInput(m.upi_id || ""); setEditingMyUpi(true); }}
-                            >
-                              {m.upi_id ? "Edit UPI ID" : "Add UPI ID"}
+                            <div className="member-email">{m.email}</div>
+                            {m.upi_id && (
+                              <div className="member-upi">
+                                <span>{m.upi_id}</span>
+                              </div>
+                            )}
+                            {isMe(m) && !editingMyUpi && (
+                              <button
+                                className="upi-edit-btn"
+                                onClick={() => { setMyUpiInput(m.upi_id || ""); setEditingMyUpi(true); }}
+                              >
+                                {m.upi_id ? "Edit UPI ID" : "Add UPI ID"}
+                              </button>
+                            )}
+                            {isMe(m) && editingMyUpi && (
+                              <div className="upi-edit-inline">
+                                <input
+                                  className="field-input"
+                                  value={myUpiInput}
+                                  onChange={(e) => setMyUpiInput(e.target.value)}
+                                  placeholder="yourname@upi"
+                                  style={{ fontSize: 12, padding: "4px 8px", height: "auto" }}
+                                />
+                                <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={updateMyUpiId}>Save</button>
+                                <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setEditingMyUpi(false)}>Cancel</button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, flexWrap: "wrap" }}>
+                          <div className={`balance-text ${b > 0.01 ? "gets" : b < -0.01 ? "owes" : "even"}`}>
+                            {b > 0.01 ? `gets ${currencySymbol}${convertFromBase(b).toFixed(2)}` : b < -0.01 ? `owes ${currencySymbol}${convertFromBase(Math.abs(b)).toFixed(2)}` : "settled"}
+                          </div>
+                          {b < -0.01 && isMe(m) && !settleState[m.id] && (
+                            <button className="btn btn-pay btn-sm" onClick={() => {
+                              // Find who this person owes money to from optimizedDebts
+                              const debtToSettle = optimizedDebts.find((d) => d.from === m.id);
+                              if (debtToSettle) {
+                                const toMember = currentGroup.members.find((x) => x.id === debtToSettle.to);
+                                if (toMember) {
+                                  openUpiPayment(m, toMember, debtToSettle.amount);
+                                  return;
+                                }
+                              }
+                              // Fallback: open settle form
+                              setSettleState({ ...settleState, [m.id]: { toId: "", amount: convertFromBase(Math.abs(b)).toFixed(2) } });
+                            }}>
+                              Pay
                             </button>
                           )}
-                          {isMe(m) && editingMyUpi && (
-                            <div className="upi-edit-inline">
-                              <input
-                                className="field-input"
-                                value={myUpiInput}
-                                onChange={(e) => setMyUpiInput(e.target.value)}
-                                placeholder="yourname@upi"
-                                style={{ fontSize: 12, padding: "4px 8px", height: "auto" }}
-                              />
-                              <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={updateMyUpiId}>Save</button>
-                              <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setEditingMyUpi(false)}>Cancel</button>
-                            </div>
+                          {isAdmin(currentGroup) && (
+                            <button className="btn-danger btn-sm" style={{ padding: "5px 10px" }} onClick={() => removeMember(m.id, m.name)} title="Remove Member">✕</button>
                           )}
                         </div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, flexWrap: "wrap" }}>
-                        <div className={`balance-text ${b > 0.01 ? "gets" : b < -0.01 ? "owes" : "even"}`}>
-                          {b > 0.01 ? `gets ${currencySymbol}${convertFromBase(b).toFixed(2)}` : b < -0.01 ? `owes ${currencySymbol}${convertFromBase(Math.abs(b)).toFixed(2)}` : "settled"}
-                        </div>
-                        {b < -0.01 && isMe(m) && !settleState[m.id] && (
-                          <button className="btn btn-pay btn-sm" onClick={() => {
-                            // Find who this person owes money to from optimizedDebts
-                            const debtToSettle = optimizedDebts.find((d) => d.from === m.id);
-                            if (debtToSettle) {
-                              const toMember = currentGroup.members.find((x) => x.id === debtToSettle.to);
-                              if (toMember) {
-                                openUpiPayment(m, toMember, debtToSettle.amount);
-                                return;
-                              }
-                            }
-                            // Fallback: open settle form
-                            setSettleState({ ...settleState, [m.id]: { toId: "", amount: convertFromBase(Math.abs(b)).toFixed(2) } });
-                          }}>
-                            Pay
-                          </button>
-                        )}
-                        {isAdmin(currentGroup) && (
-                          <button className="btn-danger btn-sm" style={{ padding: "5px 10px" }} onClick={() => removeMember(m.id, m.name)} title="Remove Member">✕</button>
-                        )}
-                      </div>
 
-                      {settleState[m.id] && (
-                        <div style={{ display: "flex", width: "100%", gap: "8px", alignItems: "center", background: "var(--bg-raised)", padding: "12px", borderRadius: "10px", flexWrap: "wrap", border: "1px solid var(--border)" }}>
-                          <select className="field-select" style={{ flex: "1 1 120px", padding: "8px 12px", fontSize: "14px", height: "auto" }} value={settleState[m.id].toId} onChange={(e) => setSettleState({ ...settleState, [m.id]: { ...settleState[m.id], toId: e.target.value } })}>
-                            <option value="">Pay to...</option>
-                            {currentGroup.members.filter(x => x.id !== m.id).map(x => (
-                               <option key={x.id} value={x.id}>{x.name}</option>
-                            ))}
-                          </select>
-                          <input type="number" min="0" step="0.01" className="field-input" style={{ flex: "1 1 100px", padding: "8px 12px", fontSize: "14px", height: "auto" }} value={settleState[m.id].amount} onChange={(e) => setSettleState({ ...settleState, [m.id]: { ...settleState[m.id], amount: e.target.value } })} />
-                          <div style={{ display: "flex", gap: "8px", flex: "1 1 auto" }}>
-                            <button className="btn btn-primary btn-sm" style={{ padding: "8px 16px" }} onClick={() => handleSettle(m.id)}>Submit</button>
-                            <button className="btn btn-secondary btn-sm" style={{ padding: "8px 16px" }} onClick={() => setSettleState((p) => { const n = { ...p }; delete n[m.id]; return n; })}>Cancel</button>
+                        {settleState[m.id] && (
+                          <div style={{ display: "flex", width: "100%", gap: "8px", alignItems: "center", background: "var(--bg-raised)", padding: "12px", borderRadius: "10px", flexWrap: "wrap", border: "1px solid var(--border)" }}>
+                            <select className="field-select" style={{ flex: "1 1 120px", padding: "8px 12px", fontSize: "14px", height: "auto" }} value={settleState[m.id].toId} onChange={(e) => setSettleState({ ...settleState, [m.id]: { ...settleState[m.id], toId: e.target.value } })}>
+                              <option value="">Pay to...</option>
+                              {currentGroup.members.filter(x => x.id !== m.id).map(x => (
+                                <option key={x.id} value={x.id}>{x.name}</option>
+                              ))}
+                            </select>
+                            <input type="number" min="0" step="0.01" className="field-input" style={{ flex: "1 1 100px", padding: "8px 12px", fontSize: "14px", height: "auto" }} value={settleState[m.id].amount} onChange={(e) => setSettleState({ ...settleState, [m.id]: { ...settleState[m.id], amount: e.target.value } })} />
+                            <div style={{ display: "flex", gap: "8px", flex: "1 1 auto" }}>
+                              <button className="btn btn-primary btn-sm" style={{ padding: "8px 16px" }} onClick={() => handleSettle(m.id)}>Submit</button>
+                              <button className="btn btn-secondary btn-sm" style={{ padding: "8px 16px" }} onClick={() => setSettleState((p) => { const n = { ...p }; delete n[m.id]; return n; })}>Cancel</button>
+                            </div>
                           </div>
+                        )}
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+
+              {/* Smart Debt Graph */}
+              {optimizedDebts.length > 0 && (
+                <div className="smart-debts">
+                  <div className="smart-debts-header">
+                    <div className="smart-debts-title">Optimized Settlements</div>
+                    <div className="smart-debts-sub">Fewest possible transactions</div>
+                  </div>
+                  <div className="debt-list">
+                    {optimizedDebts.map((debt, idx) => {
+                      const fromMem = currentGroup.members.find((m) => m.id === debt.from);
+                      const toMem = currentGroup.members.find((m) => m.id === debt.to);
+                      if (!fromMem || !toMem) return null;
+                      const fromAvatarUrl = getMemberAvatarUrl(fromMem);
+                      const toAvatarUrl = getMemberAvatarUrl(toMem);
+
+                      return (
+                        <div key={idx} className="debt-card">
+                          <div className="debt-person debtor">
+                            <div className="debt-avatar">
+                              {fromAvatarUrl ? (
+                                <img className="debt-avatar-img" src={fromAvatarUrl} alt={`${fromMem.name} avatar`} loading="lazy" />
+                              ) : (
+                                initial(fromMem.name)
+                              )}
+                            </div>
+                            <div className="debt-name">{isMe(fromMem) ? "You" : fromMem.name}</div>
+                          </div>
+
+                          <div className="debt-arrow">
+                            <div className="debt-line"></div>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="debt-arrow-icon"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                            <div className="debt-amount">{currencySymbol}{convertFromBase(debt.amount).toFixed(2)}</div>
+                          </div>
+
+                          <div className="debt-person creditor">
+                            <div className="debt-avatar">
+                              {toAvatarUrl ? (
+                                <img className="debt-avatar-img" src={toAvatarUrl} alt={`${toMem.name} avatar`} loading="lazy" />
+                              ) : (
+                                initial(toMem.name)
+                              )}
+                            </div>
+                            <div className="debt-name">{isMe(toMem) ? "You" : toMem.name}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Pie Chart: Who paid how much */}
+              {pieData.length > 0 && (
+                <div className="card" style={{ marginTop: 24, padding: "24px" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 24 }}>
+                    <div>
+                      <div className="card-title" style={{ fontSize: "16px", marginBottom: "4px" }}>Spending by member</div>
+                      <div className="card-sub" style={{ fontSize: "13px" }}>Member-wise breakdown</div>
+                    </div>
+                  </div>
+                  <div style={{ width: "100%", height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieData} dataKey="amount" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2} stroke="none">
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: any) => `${currencySymbol}${convertFromBase(Number(value)).toFixed(2)}`} />
+                        <Legend verticalAlign="bottom" height={36} iconType="square" />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Expenses */}
+            <div className="card">
+              <div className="card-head" style={{ marginBottom: 14 }}>
+                <div>
+                  <div className="card-title">Group expenses</div>
+                  <div className="card-sub">Showing top 3 latest transactions</div>
+                </div>
+              </div>
+              <form onSubmit={addExpense}>
+                <div className="form-row" style={{ marginBottom: 10 }}>
+                  <div className="field">
+                    <label className="field-label">What for?</label>
+                    <input className="field-input" value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="Hotel, Taxi, Dinner..." />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Amount ({activeCurrencyCode})</label>
+                    <input className="field-input" type="number" min="0" step="0.01" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="0.00" />
+                  </div>
+                </div>
+                <div className="form-row" style={{ marginBottom: 10 }}>
+                  <div className="field">
+                    <label className="field-label">Paid by</label>
+                    <div className="custom-form-dropdown" ref={paidByMenuRef}>
+                      <button
+                        type="button"
+                        className={`form-dropdown-trigger ${isPaidByMenuOpen ? "open" : ""}`}
+                        onClick={() => setIsPaidByMenuOpen((p) => !p)}
+                      >
+                        <span className="form-dropdown-text">
+                          {currentGroup.members.find((m) => m.id === paidById)?.name ?? "Select member"}
+                          {currentGroup.members.find((m) => m.id === paidById) && isMe(currentGroup.members.find((m) => m.id === paidById)!) ? " (You)" : ""}
+                        </span>
+                        <span className="form-dropdown-arrow">▾</span>
+                      </button>
+                      {isPaidByMenuOpen && (
+                        <div className="form-dropdown-menu">
+                          {currentGroup.members.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              className={`form-dropdown-option ${paidById === m.id ? "active" : ""}`}
+                              onClick={() => {
+                                setPaidById(m.id);
+                                setIsPaidByMenuOpen(false);
+                              }}
+                            >
+                              {m.name}{isMe(m) ? " (You)" : ""}
+                            </button>
+                          ))}
                         </div>
                       )}
-                    </li>
-                  );
-                })
-              )}
-            </ul>
-
-            {/* Smart Debt Graph */}
-            {optimizedDebts.length > 0 && (
-              <div className="smart-debts">
-                <div className="smart-debts-header">
-                  <div className="smart-debts-title">Optimized Settlements</div>
-                  <div className="smart-debts-sub">Fewest possible transactions</div>
-                </div>
-                <div className="debt-list">
-                  {optimizedDebts.map((debt, idx) => {
-                    const fromMem = currentGroup.members.find((m) => m.id === debt.from);
-                    const toMem = currentGroup.members.find((m) => m.id === debt.to);
-                    if (!fromMem || !toMem) return null;
-                    const fromAvatarUrl = getMemberAvatarUrl(fromMem);
-                    const toAvatarUrl = getMemberAvatarUrl(toMem);
-                    
-                    return (
-                      <div key={idx} className="debt-card">
-                        <div className="debt-person debtor">
-                          <div className="debt-avatar">
-                            {fromAvatarUrl ? (
-                              <img className="debt-avatar-img" src={fromAvatarUrl} alt={`${fromMem.name} avatar`} loading="lazy" />
-                            ) : (
-                              initial(fromMem.name)
-                            )}
-                          </div>
-                          <div className="debt-name">{isMe(fromMem) ? "You" : fromMem.name}</div>
-                        </div>
-                        
-                        <div className="debt-arrow">
-                          <div className="debt-line"></div>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="debt-arrow-icon"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                          <div className="debt-amount">{currencySymbol}{convertFromBase(debt.amount).toFixed(2)}</div>
-                        </div>
-
-                        <div className="debt-person creditor">
-                          <div className="debt-avatar">
-                            {toAvatarUrl ? (
-                              <img className="debt-avatar-img" src={toAvatarUrl} alt={`${toMem.name} avatar`} loading="lazy" />
-                            ) : (
-                              initial(toMem.name)
-                            )}
-                          </div>
-                          <div className="debt-name">{isMe(toMem) ? "You" : toMem.name}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Pie Chart: Who paid how much */}
-            {pieData.length > 0 && (
-              <div className="card" style={{ marginTop: 24, padding: "24px" }}>
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 24 }}>
-                  <div>
-                    <div className="card-title" style={{ fontSize: "16px", marginBottom: "4px" }}>Spending by member</div>
-                    <div className="card-sub" style={{ fontSize: "13px" }}>Member-wise breakdown</div>
+                    </div>
                   </div>
-                </div>
-                <div style={{ width: "100%", height: 260 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={pieData} dataKey="amount" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2} stroke="none">
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: any) => `${currencySymbol}${convertFromBase(Number(value)).toFixed(2)}`} />
-                      <Legend verticalAlign="bottom" height={36} iconType="square" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Expenses */}
-          <div className="card">
-            <div className="card-head" style={{ marginBottom: 14 }}>
-              <div>
-                <div className="card-title">Group expenses</div>
-                <div className="card-sub">Showing top 3 latest transactions</div>
-              </div>
-            </div>
-            <form onSubmit={addExpense}>
-              <div className="form-row" style={{ marginBottom: 10 }}>
-                <div className="field">
-                  <label className="field-label">What for?</label>
-                  <input className="field-input" value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="Hotel, Taxi, Dinner..." />
-                </div>
-                <div className="field">
-                  <label className="field-label">Amount ({activeCurrencyCode})</label>
-                  <input className="field-input" type="number" min="0" step="0.01" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="0.00" />
-                </div>
-              </div>
-              <div className="form-row" style={{ marginBottom: 10 }}>
-                <div className="field">
-                  <label className="field-label">Paid by</label>
-                  <div className="custom-form-dropdown" ref={paidByMenuRef}>
-                    <button
-                      type="button"
-                      className={`form-dropdown-trigger ${isPaidByMenuOpen ? "open" : ""}`}
-                      onClick={() => setIsPaidByMenuOpen((p) => !p)}
-                    >
-                      <span className="form-dropdown-text">
-                        {currentGroup.members.find((m) => m.id === paidById)?.name ?? "Select member"}
-                        {currentGroup.members.find((m) => m.id === paidById) && isMe(currentGroup.members.find((m) => m.id === paidById)!) ? " (You)" : ""}
-                      </span>
-                      <span className="form-dropdown-arrow">▾</span>
-                    </button>
-                    {isPaidByMenuOpen && (
-                      <div className="form-dropdown-menu">
-                        {currentGroup.members.map((m) => (
+                  <div className="field">
+                    <label className="field-label">Split type</label>
+                    <div className="custom-form-dropdown" ref={splitTypeMenuRef}>
+                      <button
+                        type="button"
+                        className={`form-dropdown-trigger ${isSplitTypeMenuOpen ? "open" : ""}`}
+                        onClick={() => setIsSplitTypeMenuOpen((p) => !p)}
+                      >
+                        <span className="form-dropdown-text">{splitType === "equal" ? "Equal split" : "Custom amounts"}</span>
+                        <span className="form-dropdown-arrow">▾</span>
+                      </button>
+                      {isSplitTypeMenuOpen && (
+                        <div className="form-dropdown-menu">
                           <button
-                            key={m.id}
                             type="button"
-                            className={`form-dropdown-option ${paidById === m.id ? "active" : ""}`}
+                            className={`form-dropdown-option ${splitType === "equal" ? "active" : ""}`}
                             onClick={() => {
-                              setPaidById(m.id);
-                              setIsPaidByMenuOpen(false);
+                              setSplitType("equal");
+                              setIsSplitTypeMenuOpen(false);
                             }}
                           >
-                            {m.name}{isMe(m) ? " (You)" : ""}
+                            Equal split
                           </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="field">
-                  <label className="field-label">Split type</label>
-                  <div className="custom-form-dropdown" ref={splitTypeMenuRef}>
-                    <button
-                      type="button"
-                      className={`form-dropdown-trigger ${isSplitTypeMenuOpen ? "open" : ""}`}
-                      onClick={() => setIsSplitTypeMenuOpen((p) => !p)}
-                    >
-                      <span className="form-dropdown-text">{splitType === "equal" ? "Equal split" : "Custom amounts"}</span>
-                      <span className="form-dropdown-arrow">▾</span>
-                    </button>
-                    {isSplitTypeMenuOpen && (
-                      <div className="form-dropdown-menu">
-                        <button
-                          type="button"
-                          className={`form-dropdown-option ${splitType === "equal" ? "active" : ""}`}
-                          onClick={() => {
-                            setSplitType("equal");
-                            setIsSplitTypeMenuOpen(false);
-                          }}
-                        >
-                          Equal split
-                        </button>
-                        <button
-                          type="button"
-                          className={`form-dropdown-option ${splitType === "custom" ? "active" : ""}`}
-                          onClick={() => {
-                            setSplitType("custom");
-                            setIsSplitTypeMenuOpen(false);
-                          }}
-                        >
-                          Custom amounts
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <label className="field-label" style={{ display: "block", marginBottom: 6 }}>Split between</label>
-              {splitType === "equal" ? (
-                <div className="split-checks">
-                  {currentGroup.members.map((m) => (
-                    <label key={m.id} className="split-check">
-                      <div className="checkbox-wrapper">
-                        <input type="checkbox" className="custom-checkbox" checked={selectedIds.has(m.id)} onChange={() => toggle(m.id)} />
-                        <div className="checkbox-box">
-                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          <button
+                            type="button"
+                            className={`form-dropdown-option ${splitType === "custom" ? "active" : ""}`}
+                            onClick={() => {
+                              setSplitType("custom");
+                              setIsSplitTypeMenuOpen(false);
+                            }}
+                          >
+                            Custom amounts
+                          </button>
                         </div>
-                      </div>
-                      <div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <label className="field-label" style={{ display: "block", marginBottom: 6 }}>Split between</label>
+                {splitType === "equal" ? (
+                  <div className="split-checks">
+                    {currentGroup.members.map((m) => (
+                      <label key={m.id} className="split-check">
+                        <div className="checkbox-wrapper">
+                          <input type="checkbox" className="custom-checkbox" checked={selectedIds.has(m.id)} onChange={() => toggle(m.id)} />
+                          <div className="checkbox-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="split-check-label">{m.name}{isMe(m) ? " (You)" : ""}</div>
+                          <div className="split-check-email">{m.email}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="split-checks">
+                    {currentGroup.members.map((m) => (
+                      <div key={m.id} className="custom-row">
                         <div className="split-check-label">{m.name}{isMe(m) ? " (You)" : ""}</div>
-                        <div className="split-check-email">{m.email}</div>
+                        <input type="number" min="0" step="0.01" placeholder="0.00" value={customAmounts[m.id] || ""} onChange={(e) => setCustomAmounts((p) => ({ ...p, [m.id]: e.target.value }))} />
                       </div>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <div className="split-checks">
-                  {currentGroup.members.map((m) => (
-                    <div key={m.id} className="custom-row">
-                      <div className="split-check-label">{m.name}{isMe(m) ? " (You)" : ""}</div>
-                      <input type="number" min="0" step="0.01" placeholder="0.00" value={customAmounts[m.id] || ""} onChange={(e) => setCustomAmounts((p) => ({ ...p, [m.id]: e.target.value }))} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 12 }}>Add expense</button>
-            </form>
-
-            <ul className="exp-list" style={{ marginTop: 18 }}>
-              {topTransactions.length === 0 ? (
-                <li style={{ textAlign: "center", padding: 20, color: "var(--text-muted)", fontSize: 14 }}>
-                  No expenses yet. Add one above.
-                </li>
-              ) : (
-                topTransactions.map((exp) => {
-                  const payer = currentGroup.members.find((m) => m.id === exp.paid_by_id);
-                  return (
-                    <li key={exp.id} className="exp-item">
-                      <div>
-                        <div className="exp-desc">{exp.description}</div>
-                        <div className="exp-meta">
-                          Paid by {payer?.name ?? "Unknown"} &middot;{" "}
-                          <span className={`split-tag ${exp.split_type}`}>{exp.split_type === "equal" ? "Equal" : "Custom"}</span> &middot;{" "}
-                          {exp.splits.length} {exp.splits.length === 1 ? "person" : "people"} &middot;{" "}
-                          {format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span className="exp-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</span>
-                        <button className="btn-danger" onClick={() => deleteExp(exp.id)} title="Delete">✕</button>
-                      </div>
-                    </li>
-                  );
-                })
-              )}
-            </ul>
-
-            {transactionsSorted.length > 3 && (
-              <div className="exp-more-row">
-                <button className="btn btn-secondary btn-sm" onClick={() => setIsAllTransactionsOpen(true)}>
-                  View all
-                </button>
-                <span className="exp-more-hint">More than 3 transactions available ↓</span>
-              </div>
-            )}
-
-            {isAllTransactionsOpen && (
-              <div className="modal-backdrop" onClick={() => setIsAllTransactionsOpen(false)}>
-                <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-                  <div className="card-head" style={{ marginBottom: 10 }}>
-                    <div>
-                      <div className="card-title">All transactions</div>
-                      <div className="card-sub">Complete Splitwise transaction history</div>
-                    </div>
-                    <button className="btn btn-secondary btn-sm" onClick={() => setIsAllTransactionsOpen(false)}>Close</button>
+                    ))}
                   </div>
+                )}
 
-                  <div className="exp-list modal-table-wrap" style={{ marginTop: 0 }}>
-                    {transactionsSorted.length === 0 ? (
-                      <div style={{ textAlign: "center", padding: 20, color: "var(--text-muted)", fontSize: 14 }}>
-                        No expenses yet. Add one above.
+                <button type="submit" className="btn btn-primary" style={{ marginTop: 12 }}>Add expense</button>
+              </form>
+
+              <ul className="exp-list" style={{ marginTop: 18 }}>
+                {topTransactions.length === 0 ? (
+                  <li style={{ textAlign: "center", padding: 20, color: "var(--text-muted)", fontSize: 14 }}>
+                    No expenses yet. Add one above.
+                  </li>
+                ) : (
+                  topTransactions.map((exp) => {
+                    const payer = currentGroup.members.find((m) => m.id === exp.paid_by_id);
+                    return (
+                      <li key={exp.id} className="exp-item">
+                        <div>
+                          <div className="exp-desc">{exp.description}</div>
+                          <div className="exp-meta">
+                            Paid by {payer?.name ?? "Unknown"} &middot;{" "}
+                            <span className={`split-tag ${exp.split_type}`}>{exp.split_type === "equal" ? "Equal" : "Custom"}</span> &middot;{" "}
+                            {exp.splits.length} {exp.splits.length === 1 ? "person" : "people"} &middot;{" "}
+                            {format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm")}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span className="exp-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</span>
+                          <button className="btn-danger" onClick={() => deleteExp(exp.id)} title="Delete">✕</button>
+                        </div>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+
+              {transactionsSorted.length > 3 && (
+                <div className="exp-more-row">
+                  <button className="btn btn-secondary btn-sm" onClick={() => setIsAllTransactionsOpen(true)}>
+                    View all
+                  </button>
+                  <span className="exp-more-hint">More than 3 transactions available ↓</span>
+                </div>
+              )}
+
+              {isAllTransactionsOpen && (
+                <div className="modal-backdrop" onClick={() => setIsAllTransactionsOpen(false)}>
+                  <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="card-head" style={{ marginBottom: 10 }}>
+                      <div>
+                        <div className="card-title">All transactions</div>
+                        <div className="card-sub">Complete Splitwise transaction history</div>
                       </div>
-                    ) : (
-                      transactionsSorted.map((exp) => {
-                        const payer = currentGroup.members.find((m) => m.id === exp.paid_by_id);
-                        const payerName = payer ? (isMe(payer) ? "You" : payer.name) : "Unknown";
-                        const splitTargets = exp.splits.map((split) => {
-                          const member = currentGroup.members.find((m) => m.id === split.member_id);
-                          return member ? (isMe(member) ? "You" : member.name) : "Unknown";
-                        });
-                        const splitTargetsText = splitTargets.length > 0 ? splitTargets.join(", ") : "No split members";
-                        const splitWithAmounts = exp.splits
-                          .map((split) => {
-                            const member = currentGroup.members.find((m) => m.id === split.member_id);
-                            const name = member ? (isMe(member) ? "You" : member.name) : "Unknown";
-                            return `${name} (${currencySymbol}${convertFromBase(split.amount).toFixed(2)})`;
-                          })
-                          .join(", ");
-                        const payFlow =
-                          exp.description === "Payment" && exp.splits.length === 1
-                            ? `${payerName} -> ${splitTargets[0] ?? "Unknown"}`
-                            : `${payerName} -> ${exp.splits.length} ${exp.splits.length === 1 ? "person" : "people"}`;
-                        const txType = exp.description === "Payment" ? "Settlement" : "Expense";
-                        const createdAtText = format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm");
+                      <button className="btn btn-secondary btn-sm" onClick={() => setIsAllTransactionsOpen(false)}>Close</button>
+                    </div>
 
-                        return (
-                          <li key={exp.id} className="exp-item exp-item-detailed">
-                            <div className="exp-item-main">
-                              <div className="txn-head-row">
-                                <div>
-                                  <div className="exp-desc">{exp.description}</div>
-                                  <div className="txn-pill-row">
-                                    <span className={`txn-type-pill ${txType === "Settlement" ? "settlement" : "expense"}`}>{txType}</span>
-                                    <span className={`split-tag ${exp.split_type}`}>{exp.split_type === "equal" ? "Equal" : "Custom"}</span>
-                                    <span className="txn-date-pill">{createdAtText}</span>
+                    <div className="exp-list modal-table-wrap" style={{ marginTop: 0 }}>
+                      {transactionsSorted.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: 20, color: "var(--text-muted)", fontSize: 14 }}>
+                          No expenses yet. Add one above.
+                        </div>
+                      ) : (
+                        transactionsSorted.map((exp) => {
+                          const payer = currentGroup.members.find((m) => m.id === exp.paid_by_id);
+                          const payerName = payer ? (isMe(payer) ? "You" : payer.name) : "Unknown";
+                          const splitTargets = exp.splits.map((split) => {
+                            const member = currentGroup.members.find((m) => m.id === split.member_id);
+                            return member ? (isMe(member) ? "You" : member.name) : "Unknown";
+                          });
+                          const splitTargetsText = splitTargets.length > 0 ? splitTargets.join(", ") : "No split members";
+                          const splitWithAmounts = exp.splits
+                            .map((split) => {
+                              const member = currentGroup.members.find((m) => m.id === split.member_id);
+                              const name = member ? (isMe(member) ? "You" : member.name) : "Unknown";
+                              return `${name} (${currencySymbol}${convertFromBase(split.amount).toFixed(2)})`;
+                            })
+                            .join(", ");
+                          const payFlow =
+                            exp.description === "Payment" && exp.splits.length === 1
+                              ? `${payerName} -> ${splitTargets[0] ?? "Unknown"}`
+                              : `${payerName} -> ${exp.splits.length} ${exp.splits.length === 1 ? "person" : "people"}`;
+                          const txType = exp.description === "Payment" ? "Settlement" : "Expense";
+                          const createdAtText = format(parseISO(exp.created_at), "dd MMM yyyy, HH:mm");
+
+                          return (
+                            <li key={exp.id} className="exp-item exp-item-detailed">
+                              <div className="exp-item-main">
+                                <div className="txn-head-row">
+                                  <div>
+                                    <div className="exp-desc">{exp.description}</div>
+                                    <div className="txn-pill-row">
+                                      <span className={`txn-type-pill ${txType === "Settlement" ? "settlement" : "expense"}`}>{txType}</span>
+                                      <span className={`split-tag ${exp.split_type}`}>{exp.split_type === "equal" ? "Equal" : "Custom"}</span>
+                                      <span className="txn-date-pill">{createdAtText}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="txn-actions">
+                                    <span className="exp-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</span>
+                                    <button className="btn-danger" onClick={() => deleteExp(exp.id)} title="Delete">✕</button>
                                   </div>
                                 </div>
 
-                                <div className="txn-actions">
-                                  <span className="exp-amount">{currencySymbol}{convertFromBase(exp.amount).toFixed(2)}</span>
-                                  <button className="btn-danger" onClick={() => deleteExp(exp.id)} title="Delete">✕</button>
+                                <div className="txn-meta-grid">
+                                  <div className="txn-meta-item">
+                                    <span className="txn-label">Who pay to who</span>
+                                    <span className="txn-value">{payFlow}</span>
+                                  </div>
+                                  <div className="txn-meta-item txn-meta-item-wide">
+                                    <span className="txn-label">Split list</span>
+                                    <span className="txn-value">{splitWithAmounts || "No split details"}</span>
+                                  </div>
                                 </div>
                               </div>
-
-                              <div className="txn-meta-grid">
-                                <div className="txn-meta-item">
-                                  <span className="txn-label">Who pay to who</span>
-                                  <span className="txn-value">{payFlow}</span>
-                                </div>
-                                <div className="txn-meta-item txn-meta-item-wide">
-                                  <span className="txn-label">Split list</span>
-                                  <span className="txn-value">{splitWithAmounts || "No split details"}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })
-                    )}
+                            </li>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -2135,7 +2227,7 @@ export function Splitwise() {
 
                 <div className="upi-flow-arrow">
                   <div className="upi-flow-amount">{currencySymbol}{convertFromBase(upiPayModal.amount).toFixed(2)}</div>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                 </div>
 
                 <div className="upi-flow-person">
@@ -2168,7 +2260,7 @@ export function Splitwise() {
                   </div>
 
                   <button className="btn btn-upi-launch" onClick={launchUpiApp}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8" /><path d="M12 17v4" /></svg>
                     Open UPI App
                   </button>
                   <div className="upi-hint">Opens your default UPI app (GPay, PhonePe, Paytm, etc.) on mobile</div>
@@ -2198,7 +2290,7 @@ export function Splitwise() {
               ) : (
                 <div className="upi-no-id">
                   <div className="upi-no-id-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
                   </div>
                   <div className="upi-no-id-text">
                     <strong>{upiPayModal.toMember.name}</strong> hasn't added their UPI ID yet.

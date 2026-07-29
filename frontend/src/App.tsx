@@ -100,6 +100,8 @@ function App() {
   });
   const { isLoaded, isSignedIn, user } = useUser();
   const [isExporting, setIsExporting] = useState(false);
+  const [activeNav, setActiveNav] = useState("features");
+  const [isBubbleOpen, setIsBubbleOpen] = useState(false);
 
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
@@ -124,10 +126,10 @@ function App() {
     >
       <div className="theme-toggle-inner">
         <svg className="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M5.5 5.5l1.5 1.5"/><path d="M17 17l1.5 1.5"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M5.5 18.5l1.5-1.5"/><path d="M17 6.5l1.5-1.5"/>
+          <circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="M5.5 5.5l1.5 1.5" /><path d="M17 17l1.5 1.5" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M5.5 18.5l1.5-1.5" /><path d="M17 6.5l1.5-1.5" />
         </svg>
         <svg className="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />
         </svg>
       </div>
     </button>
@@ -387,56 +389,114 @@ function App() {
 
   return (
     <div className="app-shell">
-      {/* Navbar */}
-      <header className="navbar">
-        <div className="navbar-brand">
-          <div className="logo-mark">
-            <img src="/favicon.svg" alt="Expezplit logo" className="logo-mark-img" />
+      {/* Floating Island Dock Navbar */}
+      <header className="navbar-wrapper">
+        <div className="navbar-island">
+          <div className="navbar-brand">
+            <div className="logo-mark">
+              <img src="/logo.png" alt="Expezplit logo" className="logo-mark-img" />
+            </div>
+            <div className="logo-text">
+              Expe<span className="logo-accent">Z</span>plit
+            </div>
+            <Show when="signed-in">
+              <button className="btn btn-secondary btn-sm download-csv-btn" onClick={handleDownloadAllCsv} disabled={isExporting}>
+                {isExporting ? (
+                  <>
+                    <svg className="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    <span>Preparing...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>Download CSV</span>
+                  </>
+                )}
+              </button>
+            </Show>
           </div>
-          <div className="logo-text">ExpeZplit</div>
-          <Show when="signed-in">
-            <button className="btn btn-secondary btn-sm download-csv-btn" onClick={handleDownloadAllCsv} disabled={isExporting}>
-              {isExporting ? (
-                <>
-                  <svg className="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                  </svg>
-                  <span>Preparing...</span>
-                </>
-              ) : (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  <span>Download CSV</span>
-                </>
-              )}
-            </button>
-          </Show>
-        </div>
 
-        <div className="navbar-actions">
           <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button className="btn btn-ghost">Login</button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button className="btn btn-primary btn-sm">Register</button>
-            </SignUpButton>
-            {themeToggleButton}
+            <nav className="navbar-nav-links">
+              <a
+                href="#features"
+                className={`nav-link-item ${activeNav === "features" ? "active" : ""}`}
+                onClick={() => setActiveNav("features")}
+              >
+                Features
+              </a>
+              <a
+                href="#workflow"
+                className={`nav-link-item ${activeNav === "workflow" ? "active" : ""}`}
+                onClick={() => setActiveNav("workflow")}
+              >
+                Workflow
+              </a>
+              <a
+                href="#stats"
+                className={`nav-link-item ${activeNav === "stats" ? "active" : ""}`}
+                onClick={() => setActiveNav("stats")}
+              >
+                Stats
+              </a>
+              <a
+                href="#matrix"
+                className={`nav-link-item ${activeNav === "matrix" ? "active" : ""}`}
+                onClick={() => setActiveNav("matrix")}
+              >
+                Matrix
+              </a>
+              <a
+                href="#pricing"
+                className={`nav-link-item ${activeNav === "pricing" ? "active" : ""}`}
+                onClick={() => setActiveNav("pricing")}
+              >
+                Pricing
+              </a>
+              <a
+                href="#faq"
+                className={`nav-link-item ${activeNav === "faq" ? "active" : ""}`}
+                onClick={() => setActiveNav("faq")}
+              >
+                FAQ
+              </a>
+            </nav>
           </Show>
 
-          <Show when="signed-in">
-            {themeToggleButton}
-            <Notifications />
-            <UserButton
-              appearance={{
-                elements: { avatarBox: { width: 34, height: 34 } },
-              }}
-            />
-          </Show>
+          <div className="navbar-actions">
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <button className="btn-login-pill">Login</button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="btn-gradient-glow-cta">
+                  <span className="btn-cta-inner">
+                    <span>Get Started</span>
+                    <svg className="cta-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </span>
+                </button>
+              </SignUpButton>
+            </Show>
+
+            <Show when="signed-in">
+              {themeToggleButton}
+              <Notifications />
+              <UserButton
+                appearance={{
+                  elements: { avatarBox: { width: 34, height: 34 } },
+                }}
+              />
+            </Show>
+          </div>
         </div>
       </header>
 
@@ -487,15 +547,15 @@ function App() {
 
         {isLoaded && isSignedIn && (
           <div className="dashboard">
-            <div className="tab-bar">
+            <div className="tab-bar main-nav-tabs">
               <button
                 className={tab === "expense" ? "tab-btn active" : "tab-btn"}
                 onClick={() => setTab("expense")}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
-                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
-                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
-                  <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z"/>
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                  <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
                 </svg>
                 Expense Tracker
               </button>
@@ -504,11 +564,11 @@ function App() {
                 onClick={() => setTab("analytics")}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
-                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
-                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
-                  <line x1="18" y1="20" x2="18" y2="15"/>
-                  <line x1="14" y1="20" x2="14" y2="13"/>
-                  <line x1="10" y1="20" x2="10" y2="16"/>
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                  <line x1="18" y1="20" x2="18" y2="15" />
+                  <line x1="14" y1="20" x2="14" y2="13" />
+                  <line x1="10" y1="20" x2="10" y2="16" />
                 </svg>
                 Analytics
               </button>
@@ -517,12 +577,98 @@ function App() {
                 onClick={() => setTab("splitwise")}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
                 Splitwise
+              </button>
+            </div>
+
+            {/* Left Bottom Floating Action Bubble Menu */}
+            <div className="bubble-nav-wrapper">
+              {isBubbleOpen && (
+                <>
+                  {/* Backdrop overlay to close menu on click outside */}
+                  <div className="bubble-menu-backdrop" onClick={() => setIsBubbleOpen(false)} />
+
+                  {/* Vertical Stack Menu Items (One Below Other) */}
+                  <div className="bubble-menu-stack">
+                    <button
+                      className={`bubble-menu-item ${tab === "splitwise" ? "active" : ""}`}
+                      style={{ animationDelay: "80ms" }}
+                      onClick={() => {
+                        setTab("splitwise");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                      <span>Group Splitwise</span>
+                    </button>
+
+                    <button
+                      className={`bubble-menu-item ${tab === "analytics" ? "active" : ""}`}
+                      style={{ animationDelay: "40ms" }}
+                      onClick={() => {
+                        setTab("analytics");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                        <line x1="18" y1="20" x2="18" y2="15" />
+                        <line x1="14" y1="20" x2="14" y2="13" />
+                        <line x1="10" y1="20" x2="10" y2="16" />
+                      </svg>
+                      <span>Analytics Insights</span>
+                    </button>
+
+                    <button
+                      className={`bubble-menu-item ${tab === "expense" ? "active" : ""}`}
+                      style={{ animationDelay: "0ms" }}
+                      onClick={() => {
+                        setTab("expense");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                        <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
+                      </svg>
+                      <span>Expense Tracker</span>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Left Bottom Floating Action Bubble Trigger Button */}
+              <button
+                className={`bubble-trigger-btn ${isBubbleOpen ? "open" : ""}`}
+                onClick={() => setIsBubbleOpen(!isBubbleOpen)}
+                title="Category Menu Bubble"
+                aria-label="Toggle navigation categories"
+              >
+                {isBubbleOpen ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                  </svg>
+                )}
               </button>
             </div>
 

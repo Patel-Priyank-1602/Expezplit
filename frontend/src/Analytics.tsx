@@ -97,7 +97,7 @@ const formatCurrencyChip = (code: string) => {
 };
 
 const COLORS = [
-  "#7C5CFC", "#3B82F6", "#22C55E", "#F59E0B", "#EF4444",
+  "#FDE406", "#3B82F6", "#22C55E", "#F59E0B", "#EF4444",
   "#EC4899", "#14B8A6", "#8B5CF6", "#06B6D4", "#F97316",
 ];
 
@@ -658,7 +658,7 @@ export function Analytics() {
 
   const currentMonthTotal = monthlyComparison.length > 0 ? monthlyComparison[monthlyComparison.length - 1].total : 0;
   const progressPct = dailyAvgStats.projectedMonth > 0 ? Math.min(100, (currentMonthTotal / dailyAvgStats.projectedMonth) * 100) : 0;
-  const radialData = [{ name: "progress", value: progressPct, fill: "#7C5CFC" }];
+  const radialData = [{ name: "progress", value: progressPct, fill: "#FDE406" }];
 
   const tooltipStyle = {
     background: "var(--bg-raised)", border: "1px solid var(--border)",
@@ -875,7 +875,7 @@ export function Analytics() {
 
       <div className="ana-kpi-grid">
         <div className="ana-kpi">
-          <div className="ana-kpi-icon" style={{ background: "linear-gradient(135deg, #7C5CFC, #a78bfa)" }}>{Icons.dollar}</div>
+          <div className="ana-kpi-icon" style={{ background: "linear-gradient(135deg, #FDE406, #fef08a)", color: "#000" }}>{Icons.dollar}</div>
           <div className="ana-kpi-body">
             <div className="ana-kpi-label">This Month</div>
             <div className="ana-kpi-value" style={{ color: "var(--accent)" }}>{currencySymbol}{currentMonthTotal.toFixed(2)}</div>
@@ -986,12 +986,12 @@ export function Analytics() {
                     <BarChart data={monthlyComparison} margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
                       <defs>
                         <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#7C5CFC" stopOpacity={1} />
-                          <stop offset="100%" stopColor="#7C5CFC" stopOpacity={0.6} />
+                          <stop offset="0%" stopColor="#FDE406" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#FDE406" stopOpacity={0.6} />
                         </linearGradient>
                         <linearGradient id="barGradMuted" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#7C5CFC" stopOpacity={0.4} />
-                          <stop offset="100%" stopColor="#7C5CFC" stopOpacity={0.15} />
+                          <stop offset="0%" stopColor="#FDE406" stopOpacity={0.4} />
+                          <stop offset="100%" stopColor="#FDE406" stopOpacity={0.15} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -1030,8 +1030,8 @@ export function Analytics() {
                     <AreaChart data={spendingPace} margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
                       <defs>
                         <linearGradient id="paceCurrentGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#7C5CFC" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#7C5CFC" stopOpacity={0.05} />
+                          <stop offset="0%" stopColor="#FDE406" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#FDE406" stopOpacity={0.05} />
                         </linearGradient>
                         <linearGradient id="paceLastGrad" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.2} />
@@ -1050,7 +1050,7 @@ export function Analytics() {
                         formatter={(v) => (v === "current" ? "This Month" : "Last Month")}
                       />
                       <Area type="monotone" dataKey="last" name="last" stroke="#3B82F6" strokeWidth={2} fill="url(#paceLastGrad)" dot={false} strokeDasharray="4 2" />
-                      <Area type="monotone" dataKey="current" name="current" stroke="#7C5CFC" strokeWidth={2} fill="url(#paceCurrentGrad)" dot={false} />
+                      <Area type="monotone" dataKey="current" name="current" stroke="#FDE406" strokeWidth={2} fill="url(#paceCurrentGrad)" dot={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -1059,7 +1059,7 @@ export function Analytics() {
           </div>
           <div className="ana-pace-summary">
             <div className="ana-pace-stat">
-              <span className="ana-pace-dot" style={{ background: "#7C5CFC" }} />
+              <span className="ana-pace-dot" style={{ background: "#FDE406" }} />
               <span className="ana-pace-label">This month:</span>
               <span className="ana-pace-val">{currencySymbol}{(spendingPace[spendingPace.length - 1]?.current ?? 0).toFixed(2)}</span>
             </div>
@@ -1318,7 +1318,7 @@ export function Analytics() {
                         <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={{ stroke: "var(--border)" }} tickLine={false} tickFormatter={(v: number) => `${currencySymbol}${Math.round(v)}`} />
                         <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${currencySymbol}${Number(v).toFixed(2)}`} />
                         <Legend />
-                        <Area type="monotone" dataKey="total" name="Expenses" stroke="#7C5CFC" fillOpacity={0.2} fill="#7C5CFC" />
+                        <Area type="monotone" dataKey="total" name="Expenses" stroke="#FDE406" fillOpacity={0.2} fill="#FDE406" />
                         <Area type="monotone" dataKey="settlements" name="Settlements" stroke="#22C55E" fillOpacity={0.15} fill="#22C55E" />
                       </AreaChart>
                     </ResponsiveContainer>

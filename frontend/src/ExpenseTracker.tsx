@@ -94,7 +94,7 @@ const formatCurrencyChip = (code: string) => {
 };
 
 const PIE_COLORS = [
-  "#7C5CFC", // purple
+  "#FDE406", // yellow
   "#3B82F6", // blue
   "#22C55E", // green
   "#F59E0B", // amber
