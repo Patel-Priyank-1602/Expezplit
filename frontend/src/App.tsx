@@ -164,20 +164,39 @@ function App() {
 
   const themeToggleButton = (
     <button
-      className="theme-toggle"
+      type="button"
+      className={`theme-switch ${theme === "light" ? "is-light" : ""}`}
       onClick={toggleTheme}
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       aria-label="Toggle theme"
+      aria-pressed={theme === "light"}
     >
-      <div className="theme-toggle-inner">
-        <svg className="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="M5.5 5.5l1.5 1.5" /><path d="M17 17l1.5 1.5" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M5.5 18.5l1.5-1.5" /><path d="M17 6.5l1.5-1.5" />
-        </svg>
-        <svg className="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />
-        </svg>
-      </div>
+      <span className="theme-switch-track" aria-hidden="true">
+        <span className="theme-switch-icon theme-switch-icon--sun">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="M5.5 5.5l1.5 1.5" /><path d="M17 17l1.5 1.5" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M5.5 18.5l1.5-1.5" /><path d="M17 6.5l1.5-1.5" />
+          </svg>
+        </span>
+        <span className="theme-switch-icon theme-switch-icon--moon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />
+          </svg>
+        </span>
+        <span className="theme-switch-thumb" />
+      </span>
     </button>
+  );
+
+  const downloadCsvIcon = isExporting ? (
+    <svg className="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  ) : (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
   );
 
   const downloadExpensesCsv = async (userId: string, stamp: string) => {
@@ -434,43 +453,66 @@ function App() {
 
   return (
     <div className="app-shell">
-      {/* Morphing Navbar: Full-width top header that smoothly morphs into a compact floating capsule island on scroll */}
-      <header className={`navbar-wrapper ${isScrolled ? "is-scrolled" : ""}`}>
-        <div className={`navbar-island ${isScrolled ? "is-scrolled" : ""}`}>
-          <a href="#" className="navbar-brand" onClick={(e) => scrollToSection(e, "hero")}>
+      {/* Signed-In: Classic Solid Dashboard Navbar | Signed-Out: Landing Page Morphing Floating Header */}
+      {isSignedIn ? (
+        <header className="navbar dashboard-navbar">
+          <div className="navbar-brand">
             <div className="logo-mark">
               <img src="/logo.png" alt="Expezplit logo" className="logo-mark-img" />
             </div>
             <div className="logo-text">
               Expe<span className="logo-accent">Z</span>plit
             </div>
-            <Show when="signed-in">
-              <button className="btn btn-secondary btn-sm download-csv-btn" onClick={handleDownloadAllCsv} disabled={isExporting}>
-                {isExporting ? (
-                  <>
-                    <svg className="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                    </svg>
-                    <span>Preparing...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    <span>Download CSV</span>
-                  </>
-                )}
-              </button>
-            </Show>
-          </a>
+          </div>
+
+          <div className="navbar-tools">
+            <button
+              type="button"
+              className="navbar-tool-btn download-csv-btn"
+              onClick={handleDownloadAllCsv}
+              disabled={isExporting}
+              title="Download CSV exports"
+            >
+              {downloadCsvIcon}
+              <span className="navbar-tool-label">{isExporting ? "Preparing..." : "Download CSV"}</span>
+            </button>
+          </div>
 
           <div className="navbar-actions">
+            <button
+              type="button"
+              className="navbar-tool-btn navbar-tool-btn--mobile download-csv-btn"
+              onClick={handleDownloadAllCsv}
+              disabled={isExporting}
+              title="Download CSV exports"
+              aria-label={isExporting ? "Preparing CSV download" : "Download CSV exports"}
+            >
+              {downloadCsvIcon}
+            </button>
             {themeToggleButton}
+            <Notifications />
+            <UserButton
+              appearance={{
+                elements: { avatarBox: { width: 38, height: 38 } },
+              }}
+            />
+          </div>
+        </header>
+      ) : (
+        <header className={`navbar-wrapper ${isScrolled ? "is-scrolled" : ""}`}>
+          <div className={`navbar-island ${isScrolled ? "is-scrolled" : ""}`}>
+            <a href="#" className="navbar-brand" onClick={(e) => scrollToSection(e, "hero")}>
+              <div className="logo-mark">
+                <img src="/logo.png" alt="Expezplit logo" className="logo-mark-img" />
+              </div>
+              <div className="logo-text">
+                Expe<span className="logo-accent">Z</span>plit
+              </div>
+            </a>
 
-            <Show when="signed-out">
+            <div className="navbar-actions">
+              {themeToggleButton}
+
               <SignInButton mode="modal">
                 <button className="btn-login-pill">Login</button>
               </SignInButton>
@@ -485,19 +527,10 @@ function App() {
                   </span>
                 </button>
               </SignUpButton>
-            </Show>
-
-            <Show when="signed-in">
-              <Notifications />
-              <UserButton
-                appearance={{
-                  elements: { avatarBox: { width: 34, height: 34 } },
-                }}
-              />
-            </Show>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main */}
       <main style={{ flex: 1 }}>
@@ -562,56 +595,57 @@ function App() {
         {isLoaded && !isSignedIn && <HomePage />}
 
         {isLoaded && isSignedIn && (
-          <div className="container">
-            {/* Desktop Dashboard Tab Bar */}
-            <div className="tab-bar desktop-tab-bar">
-              <button
-                className={tab === "expense" ? "tab-btn active" : "tab-btn"}
-                onClick={() => setTab("expense")}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
-                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                  <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
-                </svg>
-                Expenses
-              </button>
-              <button
-                className={tab === "analytics" ? "tab-btn active" : "tab-btn"}
-                onClick={() => setTab("analytics")}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
-                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                  <line x1="18" y1="20" x2="18" y2="15" />
-                  <line x1="14" y1="20" x2="14" y2="13" />
-                  <line x1="10" y1="20" x2="10" y2="16" />
-                </svg>
-                Analytics
-              </button>
-              <button
-                className={tab === "splitwise" ? "tab-btn active" : "tab-btn"}
-                onClick={() => setTab("splitwise")}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-                Splitwise
-              </button>
-            </div>
+          <div className="dashboard-wrap">
+            <div className="dashboard">
+              <div className="tab-bar main-nav-tabs">
+                <button
+                  className={tab === "expense" ? "tab-btn active" : "tab-btn"}
+                  onClick={() => setTab("expense")}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
+                    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                    <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
+                  </svg>
+                  Expenses
+                </button>
+                <button
+                  className={tab === "analytics" ? "tab-btn active" : "tab-btn"}
+                  onClick={() => setTab("analytics")}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
+                    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                    <line x1="18" y1="20" x2="18" y2="15" />
+                    <line x1="14" y1="20" x2="14" y2="13" />
+                    <line x1="10" y1="20" x2="10" y2="16" />
+                  </svg>
+                  Analytics
+                </button>
+                <button
+                  className={tab === "splitwise" ? "tab-btn active" : "tab-btn"}
+                  onClick={() => setTab("splitwise")}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: -2 }}>
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  Splitwise
+                </button>
+              </div>
 
-            {tab === "expense" && <ExpenseTracker />}
-            {tab === "analytics" && <Analytics />}
-            {tab === "splitwise" && <Splitwise />}
+              {tab === "expense" && <ExpenseTracker />}
+              {tab === "analytics" && <Analytics />}
+              {tab === "splitwise" && <Splitwise />}
+            </div>
           </div>
         )}
       </main>
 
-      {/* ── Fixed Bottom-Right Floating Action Navigation Menu (FAB) ── */}
-      {isLoaded && (
+      {/* ── Fixed Bottom-Right Floating Action Navigation Menu (FAB) for Landing Page ── */}
+      {isLoaded && !isSignedIn && (
         <div className="fab-nav-wrapper">
           {isBubbleOpen && (
             <>
@@ -620,160 +654,101 @@ function App() {
 
               {/* Vertical Stack Menu Items (Aligned Bottom-Right) */}
               <div className="fab-menu-stack">
-                {!isSignedIn ? (
-                  /* Landing Page Navigation Pills */
-                  <>
-                    <a
-                      href="#faq"
-                      className={`fab-pill-item ${activeNav === "faq" ? "active" : ""}`}
-                      style={{ animationDelay: "280ms" }}
-                      onClick={(e) => {
-                        scrollToSection(e, "faq");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <span className="fab-pill-label">FAQ</span>
-                    </a>
+                <a
+                  href="#faq"
+                  className={`fab-pill-item ${activeNav === "faq" ? "active" : ""}`}
+                  style={{ animationDelay: "280ms" }}
+                  onClick={(e) => {
+                    scrollToSection(e, "faq");
+                    setIsBubbleOpen(false);
+                  }}
+                >
+                  <span className="fab-pill-label">FAQ</span>
+                </a>
 
-                    <a
-                      href="#pricing"
-                      className={`fab-pill-item ${activeNav === "pricing" ? "active" : ""}`}
-                      style={{ animationDelay: "240ms" }}
-                      onClick={(e) => {
-                        scrollToSection(e, "pricing");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <span className="fab-pill-label">Pricing</span>
-                    </a>
+                <a
+                  href="#pricing"
+                  className={`fab-pill-item ${activeNav === "pricing" ? "active" : ""}`}
+                  style={{ animationDelay: "240ms" }}
+                  onClick={(e) => {
+                    scrollToSection(e, "pricing");
+                    setIsBubbleOpen(false);
+                  }}
+                >
+                  <span className="fab-pill-label">Pricing</span>
+                </a>
 
-                    <a
-                      href="#testimonials"
-                      className={`fab-pill-item ${activeNav === "testimonials" ? "active" : ""}`}
-                      style={{ animationDelay: "200ms" }}
-                      onClick={(e) => {
-                        scrollToSection(e, "testimonials");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <span className="fab-pill-label">User Reviews</span>
-                    </a>
+                <a
+                  href="#testimonials"
+                  className={`fab-pill-item ${activeNav === "testimonials" ? "active" : ""}`}
+                  style={{ animationDelay: "200ms" }}
+                  onClick={(e) => {
+                    scrollToSection(e, "testimonials");
+                    setIsBubbleOpen(false);
+                  }}
+                >
+                  <span className="fab-pill-label">User Reviews</span>
+                </a>
 
-                    <a
-                      href="#matrix"
-                      className={`fab-pill-item ${activeNav === "matrix" ? "active" : ""}`}
-                      style={{ animationDelay: "160ms" }}
-                      onClick={(e) => {
-                        scrollToSection(e, "matrix");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <span className="fab-pill-label">System Matrix</span>
-                    </a>
+                <a
+                  href="#matrix"
+                  className={`fab-pill-item ${activeNav === "matrix" ? "active" : ""}`}
+                  style={{ animationDelay: "160ms" }}
+                  onClick={(e) => {
+                    scrollToSection(e, "matrix");
+                    setIsBubbleOpen(false);
+                  }}
+                >
+                  <span className="fab-pill-label">System Matrix</span>
+                </a>
 
-                    <a
-                      href="#workflow"
-                      className={`fab-pill-item ${activeNav === "workflow" ? "active" : ""}`}
-                      style={{ animationDelay: "120ms" }}
-                      onClick={(e) => {
-                        scrollToSection(e, "workflow");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <span className="fab-pill-label">Workflow</span>
-                    </a>
+                <a
+                  href="#workflow"
+                  className={`fab-pill-item ${activeNav === "workflow" ? "active" : ""}`}
+                  style={{ animationDelay: "120ms" }}
+                  onClick={(e) => {
+                    scrollToSection(e, "workflow");
+                    setIsBubbleOpen(false);
+                  }}
+                >
+                  <span className="fab-pill-label">Workflow</span>
+                </a>
 
-                    <a
-                      href="#calculator"
-                      className={`fab-pill-item ${activeNav === "calculator" ? "active" : ""}`}
-                      style={{ animationDelay: "80ms" }}
-                      onClick={(e) => {
-                        scrollToSection(e, "calculator");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <span className="fab-pill-label">Live Split Calc</span>
-                    </a>
+                <a
+                  href="#calculator"
+                  className={`fab-pill-item ${activeNav === "calculator" ? "active" : ""}`}
+                  style={{ animationDelay: "80ms" }}
+                  onClick={(e) => {
+                    scrollToSection(e, "calculator");
+                    setIsBubbleOpen(false);
+                  }}
+                >
+                  <span className="fab-pill-label">Live Split Calc</span>
+                </a>
 
-                    <a
-                      href="#demo"
-                      className={`fab-pill-item ${activeNav === "demo" ? "active" : ""}`}
-                      style={{ animationDelay: "40ms" }}
-                      onClick={(e) => {
-                        scrollToSection(e, "demo");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <span className="fab-pill-label">Simulator</span>
-                    </a>
+                <a
+                  href="#demo"
+                  className={`fab-pill-item ${activeNav === "demo" ? "active" : ""}`}
+                  style={{ animationDelay: "40ms" }}
+                  onClick={(e) => {
+                    scrollToSection(e, "demo");
+                    setIsBubbleOpen(false);
+                  }}
+                >
+                  <span className="fab-pill-label">Simulator</span>
+                </a>
 
-                    <a
-                      href="#features"
-                      className={`fab-pill-item ${activeNav === "features" ? "active" : ""}`}
-                      style={{ animationDelay: "0ms" }}
-                      onClick={(e) => {
-                        scrollToSection(e, "features");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <span className="fab-pill-label">Features</span>
-                    </a>
-                  </>
-                ) : (
-                  /* Signed-In Dashboard Navigation Pills */
-                  <>
-                    <button
-                      className={`fab-pill-item ${tab === "splitwise" ? "active" : ""}`}
-                      style={{ animationDelay: "80ms" }}
-                      onClick={() => {
-                        setTab("splitwise");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                      </svg>
-                      <span className="fab-pill-label">Group Splitwise</span>
-                    </button>
-
-                    <button
-                      className={`fab-pill-item ${tab === "analytics" ? "active" : ""}`}
-                      style={{ animationDelay: "40ms" }}
-                      onClick={() => {
-                        setTab("analytics");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                        <line x1="18" y1="20" x2="18" y2="15" />
-                        <line x1="14" y1="20" x2="14" y2="13" />
-                        <line x1="10" y1="20" x2="10" y2="16" />
-                      </svg>
-                      <span className="fab-pill-label">Analytics Insights</span>
-                    </button>
-
-                    <button
-                      className={`fab-pill-item ${tab === "expense" ? "active" : ""}`}
-                      style={{ animationDelay: "0ms" }}
-                      onClick={() => {
-                        setTab("expense");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                        <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
-                      </svg>
-                      <span className="fab-pill-label">Expense Tracker</span>
-                    </button>
-                  </>
-                )}
+                <a
+                  href="#features"
+                  className={`fab-pill-item ${activeNav === "features" ? "active" : ""}`}
+                  style={{ animationDelay: "0ms" }}
+                  onClick={(e) => {
+                    scrollToSection(e, "features");
+                    setIsBubbleOpen(false);
+                  }}
+                >
+                  <span className="fab-pill-label">Features</span>
+                </a>
               </div>
             </>
           )}
@@ -799,6 +774,53 @@ function App() {
             )}
           </button>
         </div>
+      )}
+
+      {isLoaded && isSignedIn && (
+        <nav className="mobile-bottom-nav" aria-label="Dashboard navigation">
+          <button
+            type="button"
+            className={`mobile-nav-item ${tab === "expense" ? "active" : ""}`}
+            onClick={() => setTab("expense")}
+            aria-current={tab === "expense" ? "page" : undefined}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+              <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
+            </svg>
+            <span>Expenses</span>
+          </button>
+          <button
+            type="button"
+            className={`mobile-nav-item ${tab === "analytics" ? "active" : ""}`}
+            onClick={() => setTab("analytics")}
+            aria-current={tab === "analytics" ? "page" : undefined}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+              <line x1="18" y1="20" x2="18" y2="15" />
+              <line x1="14" y1="20" x2="14" y2="13" />
+              <line x1="10" y1="20" x2="10" y2="16" />
+            </svg>
+            <span>Analytics</span>
+          </button>
+          <button
+            type="button"
+            className={`mobile-nav-item ${tab === "splitwise" ? "active" : ""}`}
+            onClick={() => setTab("splitwise")}
+            aria-current={tab === "splitwise" ? "page" : undefined}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <span>Splitwise</span>
+          </button>
+        </nav>
       )}
     </div>
   );

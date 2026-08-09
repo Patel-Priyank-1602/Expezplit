@@ -98,6 +98,44 @@ type Group = {
   owner_user_id: string;
 };
 
+/* ─── Group Theme Color Presets ─── */
+export const GROUP_COLOR_PRESETS = [
+  { id: "coral", name: "Coral Sunset", value: "linear-gradient(135deg, #FF6B6B, #C0392B)", solid: "#FF6B6B" },
+  { id: "cyan", name: "Electric Cyan", value: "linear-gradient(135deg, #4facfe, #00f2fe)", solid: "#00f2fe" },
+  { id: "emerald", name: "Emerald Mint", value: "linear-gradient(135deg, #43e97b, #38f9d7)", solid: "#43e97b" },
+  { id: "peach", name: "Peach Sunrise", value: "linear-gradient(135deg, #fa709a, #fee140)", solid: "#fa709a" },
+  { id: "violet", name: "Royal Violet", value: "linear-gradient(135deg, #667eea, #764ba2)", solid: "#667eea" },
+  { id: "pink", name: "Neon Rose", value: "linear-gradient(135deg, #f77062, #fe5196)", solid: "#fe5196" },
+  { id: "amber", name: "Amber Gold", value: "linear-gradient(135deg, #16a085, #f4d03f)", solid: "#f4d03f" },
+  { id: "purple", name: "Cyber Purple", value: "linear-gradient(135deg, #b224ef, #7579ff)", solid: "#b224ef" },
+];
+
+export const GROUP_EMOJI_PRESETS = [
+  "✈️", "🏠", "🍕", "🏖️", "🚗", "🛒", "🍿", "🍻",
+  "💼", "⛺", "☕", "🎮", "🎉", "💸", "🍔", "🎓",
+  "⚡", "🍣", "🎳", "🚲", "🎿", "🏝️", "🎸", "🏆"
+];
+
+export const getGroupSavedTheme = (groupId: string, defaultIdx: number): string => {
+  const saved = localStorage.getItem(`expezplit_group_theme_${groupId}`);
+  if (saved) return saved;
+  return GROUP_COLOR_PRESETS[defaultIdx % GROUP_COLOR_PRESETS.length].value;
+};
+
+export const setGroupSavedTheme = (groupId: string, colorValue: string) => {
+  localStorage.setItem(`expezplit_group_theme_${groupId}`, colorValue);
+};
+
+export const getGroupSavedEmoji = (groupId: string, defaultIdx: number): string => {
+  const saved = localStorage.getItem(`expezplit_group_emoji_${groupId}`);
+  if (saved) return saved;
+  return GROUP_EMOJI_PRESETS[defaultIdx % GROUP_EMOJI_PRESETS.length];
+};
+
+export const setGroupSavedEmoji = (groupId: string, emoji: string) => {
+  localStorage.setItem(`expezplit_group_emoji_${groupId}`, emoji);
+};
+
 /* ─── Invite code generator ───
    Format: 3 digits + 3 letters + 3 special chars, shuffled together */
 const generateInviteCode = (): string => {
@@ -125,6 +163,19 @@ export function Splitwise() {
   const [activeTab, setActiveTab] = useState<"your_groups" | "create_join">("your_groups");
 
   const [groupName, setGroupName] = useState("");
+  const [groupThemes, setGroupThemes] = useState<Record<string, string>>({});
+  const [groupEmojis, setGroupEmojis] = useState<Record<string, string>>({});
+  const [createGroupEmoji, setCreateGroupEmoji] = useState<string>("✈️");
+  const [createGroupColorMode, setCreateGroupColorMode] = useState<"preset" | "custom">("preset");
+  const [createGroupPreset, setCreateGroupPreset] = useState<string>(GROUP_COLOR_PRESETS[0].value);
+  const [createGroupCustomColor, setCreateGroupCustomColor] = useState<string>("#3B82F6");
+
+  // Editing color & emoji for existing group
+  const [editingThemeGroup, setEditingThemeGroup] = useState<Group | null>(null);
+  const [editThemeEmoji, setEditThemeEmoji] = useState<string>("✈️");
+  const [editThemeColorMode, setEditThemeColorMode] = useState<"preset" | "custom">("preset");
+  const [editThemePreset, setEditThemePreset] = useState<string>(GROUP_COLOR_PRESETS[0].value);
+  const [editThemeCustomColor, setEditThemeCustomColor] = useState<string>("#3B82F6");
 
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState("");
@@ -537,10 +588,48 @@ export function Splitwise() {
       owner_user_id: grp.user_id ?? userId ?? "",
     };
 
+    const selectedColor = createGroupColorMode === "custom" ? createGroupCustomColor : createGroupPreset;
+    setGroupSavedTheme(grp.id, selectedColor);
+    setGroupSavedEmoji(grp.id, createGroupEmoji);
+    setGroupThemes((prev) => ({ ...prev, [grp.id]: selectedColor }));
+    setGroupEmojis((prev) => ({ ...prev, [grp.id]: createGroupEmoji }));
+
     setGroups((p) => [...p, newGroup]);
     applyActiveGroup(newGroup);
     setGroupName("");
     setActiveTab("your_groups");
+  };
+
+  /* ─── Sync group themes & emojis from storage ─── */
+  useEffect(() => {
+    const loadedThemes: Record<string, string> = {};
+    const loadedEmojis: Record<string, string> = {};
+    groups.forEach((g, idx) => {
+      loadedThemes[g.id] = getGroupSavedTheme(g.id, idx);
+      loadedEmojis[g.id] = getGroupSavedEmoji(g.id, idx);
+    });
+    setGroupThemes(loadedThemes);
+    setGroupEmojis(loadedEmojis);
+  }, [groups]);
+
+  const handleSaveGroupTheme = (groupId: string) => {
+    const selectedColor = editThemeColorMode === "custom" ? editThemeCustomColor : editThemePreset;
+    setGroupSavedTheme(groupId, selectedColor);
+    setGroupSavedEmoji(groupId, editThemeEmoji);
+    setGroupThemes((prev) => ({ ...prev, [groupId]: selectedColor }));
+    setGroupEmojis((prev) => ({ ...prev, [groupId]: editThemeEmoji }));
+    setEditingThemeGroup(null);
+  };
+
+  const handleResetGroupTheme = (groupId: string) => {
+    localStorage.removeItem(`expezplit_group_theme_${groupId}`);
+    localStorage.removeItem(`expezplit_group_emoji_${groupId}`);
+    const groupIdx = groups.findIndex((g) => g.id === groupId);
+    const defaultColor = GROUP_COLOR_PRESETS[(groupIdx >= 0 ? groupIdx : 0) % GROUP_COLOR_PRESETS.length].value;
+    const defaultEmoji = GROUP_EMOJI_PRESETS[(groupIdx >= 0 ? groupIdx : 0) % GROUP_EMOJI_PRESETS.length];
+    setGroupThemes((prev) => ({ ...prev, [groupId]: defaultColor }));
+    setGroupEmojis((prev) => ({ ...prev, [groupId]: defaultEmoji }));
+    setEditingThemeGroup(null);
   };
 
   /* ─── Auto-join from URL (Google Lens / camera scan) ─── */
@@ -1293,13 +1382,15 @@ export function Splitwise() {
 
               <div className="group-cards-grid">
                 {groups.map((g, idx) => {
-                  const bgClass = `group-bg-${idx % 8}`;
+                  const cardBg = groupThemes[g.id] || getGroupSavedTheme(g.id, idx);
+                  const cardEmoji = groupEmojis[g.id] || getGroupSavedEmoji(g.id, idx);
                   const isSelected = g.id === selectedGroupId;
 
                   return (
                     <div
                       key={g.id}
-                      className={`group-card-item ${isSelected ? 'active' : ''} ${bgClass}`}
+                      className={`group-card-item ${isSelected ? 'active' : ''}`}
+                      style={{ background: cardBg }}
                       onClick={() => {
                         applyActiveGroup(isSelected ? null : g);
                         if (!isSelected) {
@@ -1310,20 +1401,56 @@ export function Splitwise() {
                         }
                       }}
                     >
+                      {/* Left side half-cut background emoji */}
+                      <div className="group-card-cutout-emoji" aria-hidden="true">
+                        {cardEmoji}
+                      </div>
+
+                      {/* Top-Left Edit Icon & Color button (shows on hover) */}
+                      <button
+                        type="button"
+                        className="group-color-btn top-left"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingThemeGroup(g);
+                          setEditThemeEmoji(groupEmojis[g.id] || getGroupSavedEmoji(g.id, idx));
+                          const current = groupThemes[g.id] || getGroupSavedTheme(g.id, idx);
+                          if (current.startsWith("#") || current.startsWith("rgb")) {
+                            setEditThemeColorMode("custom");
+                            setEditThemeCustomColor(current);
+                          } else {
+                            setEditThemeColorMode("preset");
+                            setEditThemePreset(current);
+                          }
+                        }}
+                        title="Edit group icon & color"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+
+                      {/* Top-Right Delete Button (shows on hover for admin) */}
+                      {isAdmin(g) && (
+                        <button
+                          type="button"
+                          className="group-delete-btn top-right"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteGroup(e, g.id, g.name);
+                          }}
+                          title="Delete group"
+                          disabled={isDeletingGroups}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                        </button>
+                      )}
+
                       <div className="group-card-content">
                         <h3 className="group-card-name">{g.name}</h3>
                         <div className="group-card-members">{g.members.length} member{g.members.length !== 1 ? 's' : ''}</div>
                       </div>
-                      {isAdmin(g) && (
-                        <button
-                          className="group-delete-btn"
-                          onClick={(e) => deleteGroup(e, g.id, g.name)}
-                          title="Delete group"
-                          disabled={isDeletingGroups}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                        </button>
-                      )}
                     </div>
                   );
                 })}
@@ -1339,14 +1466,135 @@ export function Splitwise() {
             <div className="card-title" style={{ marginBottom: 14 }}>Create a new group</div>
             <form onSubmit={createGroup}>
               <div className="form-row">
-                <div className="field">
+                <div className="field" style={{ flex: 1 }}>
                   <label className="field-label">Group name</label>
                   <input className="field-input" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Trip, Roommates, Office lunch..." />
                 </div>
-                <div className="field" style={{ flex: "0 0 auto" }}>
-                  <label className="field-label hidden-mobile">&nbsp;</label>
-                  <button type="submit" className="btn btn-primary" style={{ padding: "10px 20px" }}>Create</button>
+              </div>
+
+              {/* Group Emoji Selection */}
+              <div className="group-emoji-picker-section" style={{ marginTop: 14 }}>
+                <div className="color-picker-header">
+                  <span className="section-subtitle-label">Group Icon / Emoji</span>
+                  <div className="custom-emoji-row">
+                    <span className="custom-emoji-label">Custom:</span>
+                    <input
+                      type="text"
+                      className="field-input custom-emoji-input"
+                      value={createGroupEmoji}
+                      onChange={(e) => setCreateGroupEmoji(e.target.value)}
+                      placeholder="✈️"
+                      maxLength={4}
+                    />
+                  </div>
                 </div>
+                <div className="emoji-presets-grid">
+                  {GROUP_EMOJI_PRESETS.map((emoji) => {
+                    const isSelected = createGroupEmoji === emoji;
+                    return (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={`emoji-preset-btn ${isSelected ? "selected" : ""}`}
+                        onClick={() => setCreateGroupEmoji(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Group Theme / Color Selection */}
+              <div className="group-color-picker-section" style={{ marginTop: 14 }}>
+                <div className="color-picker-header">
+                  <label className="field-label" style={{ marginBottom: 0 }}>Group Theme Color</label>
+                  <div className="color-mode-tabs">
+                    <button
+                      type="button"
+                      className={`color-mode-tab ${createGroupColorMode === "preset" ? "active" : ""}`}
+                      onClick={() => setCreateGroupColorMode("preset")}
+                    >
+                      Default Presets
+                    </button>
+                    <button
+                      type="button"
+                      className={`color-mode-tab ${createGroupColorMode === "custom" ? "active" : ""}`}
+                      onClick={() => setCreateGroupColorMode("custom")}
+                    >
+                      Custom Color
+                    </button>
+                  </div>
+                </div>
+
+                {createGroupColorMode === "preset" ? (
+                  <div className="preset-swatches-grid">
+                    {GROUP_COLOR_PRESETS.map((preset) => {
+                      const isSelected = createGroupPreset === preset.value;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          className={`preset-swatch-btn ${isSelected ? "selected" : ""}`}
+                          style={{ background: preset.value }}
+                          onClick={() => setCreateGroupPreset(preset.value)}
+                          title={preset.name}
+                        >
+                          {isSelected && <span className="swatch-check">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="custom-color-row">
+                    <div className="custom-color-input-wrap">
+                      <input
+                        type="color"
+                        id="create-group-custom-color"
+                        className="custom-color-input"
+                        value={createGroupCustomColor}
+                        onChange={(e) => setCreateGroupCustomColor(e.target.value)}
+                      />
+                      <label htmlFor="create-group-custom-color" className="custom-color-preview-circle" style={{ background: createGroupCustomColor }} />
+                    </div>
+                    <div className="custom-color-hex-field">
+                      <span className="hex-prefix">HEX:</span>
+                      <input
+                        type="text"
+                        className="field-input hex-input"
+                        value={createGroupCustomColor}
+                        onChange={(e) => setCreateGroupCustomColor(e.target.value)}
+                        placeholder="#3B82F6"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Card Preview */}
+                <div className="group-card-live-preview-wrap">
+                  <span className="preview-label">Card Live Preview:</span>
+                  <div
+                    className="group-card-item group-card-preview"
+                    style={{
+                      background: createGroupColorMode === "custom" ? createGroupCustomColor : createGroupPreset,
+                    }}
+                  >
+                    <div className="group-card-cutout-emoji" aria-hidden="true">
+                      {createGroupEmoji}
+                    </div>
+                    <div className="group-card-content">
+                      <h3 className="group-card-name">{groupName.trim() || "Your Group Name"}</h3>
+                      <div className="group-card-members">1 member</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 18, display: "flex", justifyContent: "flex-end" }}>
+                <button type="submit" className="btn btn-primary" style={{ padding: "10px 24px" }} disabled={!groupName.trim()}>
+                  Create Group
+                </button>
               </div>
             </form>
           </div>
@@ -1521,6 +1769,36 @@ export function Splitwise() {
             </div>
 
             <div className="invite-code-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setEditingThemeGroup(currentGroup);
+                  const current = groupThemes[currentGroup.id] || getGroupSavedTheme(currentGroup.id, 0);
+                  if (current.startsWith("#") || current.startsWith("rgb")) {
+                    setEditThemeColorMode("custom");
+                    setEditThemeCustomColor(current);
+                  } else {
+                    setEditThemeColorMode("preset");
+                    setEditThemePreset(current);
+                  }
+                }}
+                title="Change group theme color"
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                <span
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "50%",
+                    background: groupThemes[currentGroup.id] || getGroupSavedTheme(currentGroup.id, 0),
+                    display: "inline-block",
+                    border: "1px solid rgba(255,255,255,0.4)",
+                  }}
+                />
+                <span>Color</span>
+              </button>
+
               <button
                 type="button"
                 className="btn-refresh"
@@ -2318,6 +2596,147 @@ export function Splitwise() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Group Theme Customization Modal ── */}
+      {editingThemeGroup && (
+        <div className="tm-backdrop" onClick={() => setEditingThemeGroup(null)}>
+          <div className="tm-dialog" onClick={(e) => e.stopPropagation()}>
+
+            {/* ── Left Panel: Live Preview ── */}
+            <div className="tm-preview-panel" style={{
+              background: editThemeColorMode === "custom" ? editThemeCustomColor : editThemePreset,
+            }}>
+              <div className="tm-preview-emoji" aria-hidden="true">{editThemeEmoji}</div>
+              <div className="tm-preview-info">
+                <h3 className="tm-preview-name">{editingThemeGroup.name}</h3>
+                <span className="tm-preview-members">{editingThemeGroup.members.length} members</span>
+              </div>
+              <div className="tm-preview-badge">Live Preview</div>
+            </div>
+
+            {/* ── Right Panel: Controls ── */}
+            <div className="tm-controls-panel">
+
+              {/* Header */}
+              <div className="tm-header">
+                <div>
+                  <h3 className="tm-title">Customize</h3>
+                  <span className="tm-subtitle">{editingThemeGroup.name}</span>
+                </div>
+                <button type="button" className="tm-close" onClick={() => setEditingThemeGroup(null)} aria-label="Close">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="tm-body">
+
+                {/* ── Emoji Section ── */}
+                <div className="tm-section">
+                  <div className="tm-section-head">
+                    <span className="tm-section-label">Icon</span>
+                    <div className="tm-custom-emoji-row">
+                      <input
+                        type="text"
+                        className="tm-emoji-input"
+                        value={editThemeEmoji}
+                        onChange={(e) => setEditThemeEmoji(e.target.value)}
+                        placeholder="✈️"
+                        maxLength={4}
+                      />
+                    </div>
+                  </div>
+                  <div className="tm-emoji-grid">
+                    {GROUP_EMOJI_PRESETS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={`tm-emoji-btn ${editThemeEmoji === emoji ? "active" : ""}`}
+                        onClick={() => setEditThemeEmoji(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Color Section ── */}
+                <div className="tm-section">
+                  <div className="tm-section-head">
+                    <span className="tm-section-label">Color</span>
+                    <div className="tm-color-tabs">
+                      <button
+                        type="button"
+                        className={`tm-tab ${editThemeColorMode === "preset" ? "active" : ""}`}
+                        onClick={() => setEditThemeColorMode("preset")}
+                      >Presets</button>
+                      <button
+                        type="button"
+                        className={`tm-tab ${editThemeColorMode === "custom" ? "active" : ""}`}
+                        onClick={() => setEditThemeColorMode("custom")}
+                      >Custom</button>
+                    </div>
+                  </div>
+
+                  {editThemeColorMode === "preset" ? (
+                    <div className="tm-swatch-grid">
+                      {GROUP_COLOR_PRESETS.map((preset) => {
+                        const sel = editThemePreset === preset.value;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            className={`tm-swatch ${sel ? "active" : ""}`}
+                            style={{ background: preset.value }}
+                            onClick={() => setEditThemePreset(preset.value)}
+                            title={preset.name}
+                          >
+                            {sel && <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7.5L5.5 11L12 3" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="tm-custom-color">
+                      <div className="tm-color-picker-wrap">
+                        <input
+                          type="color"
+                          id="edit-group-custom-color"
+                          className="tm-color-native"
+                          value={editThemeCustomColor}
+                          onChange={(e) => setEditThemeCustomColor(e.target.value)}
+                        />
+                        <label htmlFor="edit-group-custom-color" className="tm-color-circle" style={{ background: editThemeCustomColor }} />
+                      </div>
+                      <div className="tm-hex-wrap">
+                        <span className="tm-hex-label">HEX</span>
+                        <input
+                          type="text"
+                          className="tm-hex-input"
+                          value={editThemeCustomColor}
+                          onChange={(e) => setEditThemeCustomColor(e.target.value)}
+                          placeholder="#3B82F6"
+                          maxLength={7}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="tm-footer">
+                <button type="button" className="tm-btn tm-btn-ghost" onClick={() => handleResetGroupTheme(editingThemeGroup.id)}>Reset</button>
+                <div className="tm-footer-right">
+                  <button type="button" className="tm-btn tm-btn-secondary" onClick={() => setEditingThemeGroup(null)}>Cancel</button>
+                  <button type="button" className="tm-btn tm-btn-primary" onClick={() => handleSaveGroupTheme(editingThemeGroup.id)}>Save</button>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
