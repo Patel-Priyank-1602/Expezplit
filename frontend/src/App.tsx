@@ -102,6 +102,7 @@ function App() {
   const [isExporting, setIsExporting] = useState(false);
   const [activeNav, setActiveNav] = useState("features");
   const [isBubbleOpen, setIsBubbleOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
@@ -115,7 +116,51 @@ function App() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
+  // Scroll listener for morphing navbar & ScrollSpy navigation
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setIsScrolled(scrollY > 25);
+
+      if (!isSignedIn) {
+        const sectionIds = ["demo", "features", "calculator", "workflow", "matrix", "testimonials", "pricing", "faq"];
+        const scrollPosition = scrollY + 120;
+        
+        for (let i = sectionIds.length - 1; i >= 0; i--) {
+          const section = document.getElementById(sectionIds[i]);
+          if (section) {
+            const top = section.offsetTop;
+            if (scrollPosition >= top) {
+              setActiveNav(sectionIds[i]);
+              break;
+            }
+          }
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isSignedIn]);
+
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    setActiveNav(id);
+    setIsBubbleOpen(false);
+    const element = document.getElementById(id);
+    if (element) {
+      const navbarHeight = 84;
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - navbarHeight;
+      window.scrollTo({
+        top: Math.max(0, offsetPosition),
+        behavior: "smooth"
+      });
+    }
+  };
 
   const themeToggleButton = (
     <button
@@ -389,10 +434,10 @@ function App() {
 
   return (
     <div className="app-shell">
-      {/* Floating Island Dock Navbar */}
-      <header className="navbar-wrapper">
-        <div className="navbar-island">
-          <div className="navbar-brand">
+      {/* Morphing Navbar: Full-width top header that smoothly morphs into a compact floating capsule island on scroll */}
+      <header className={`navbar-wrapper ${isScrolled ? "is-scrolled" : ""}`}>
+        <div className={`navbar-island ${isScrolled ? "is-scrolled" : ""}`}>
+          <a href="#" className="navbar-brand" onClick={(e) => scrollToSection(e, "hero")}>
             <div className="logo-mark">
               <img src="/logo.png" alt="Expezplit logo" className="logo-mark-img" />
             </div>
@@ -420,56 +465,11 @@ function App() {
                 )}
               </button>
             </Show>
-          </div>
-
-          <Show when="signed-out">
-            <nav className="navbar-nav-links">
-              <a
-                href="#features"
-                className={`nav-link-item ${activeNav === "features" ? "active" : ""}`}
-                onClick={() => setActiveNav("features")}
-              >
-                Features
-              </a>
-              <a
-                href="#workflow"
-                className={`nav-link-item ${activeNav === "workflow" ? "active" : ""}`}
-                onClick={() => setActiveNav("workflow")}
-              >
-                Workflow
-              </a>
-              <a
-                href="#stats"
-                className={`nav-link-item ${activeNav === "stats" ? "active" : ""}`}
-                onClick={() => setActiveNav("stats")}
-              >
-                Stats
-              </a>
-              <a
-                href="#matrix"
-                className={`nav-link-item ${activeNav === "matrix" ? "active" : ""}`}
-                onClick={() => setActiveNav("matrix")}
-              >
-                Matrix
-              </a>
-              <a
-                href="#pricing"
-                className={`nav-link-item ${activeNav === "pricing" ? "active" : ""}`}
-                onClick={() => setActiveNav("pricing")}
-              >
-                Pricing
-              </a>
-              <a
-                href="#faq"
-                className={`nav-link-item ${activeNav === "faq" ? "active" : ""}`}
-                onClick={() => setActiveNav("faq")}
-              >
-                FAQ
-              </a>
-            </nav>
-          </Show>
+          </a>
 
           <div className="navbar-actions">
+            {themeToggleButton}
+
             <Show when="signed-out">
               <SignInButton mode="modal">
                 <button className="btn-login-pill">Login</button>
@@ -488,7 +488,6 @@ function App() {
             </Show>
 
             <Show when="signed-in">
-              {themeToggleButton}
               <Notifications />
               <UserButton
                 appearance={{
@@ -535,10 +534,27 @@ function App() {
               <div className="skeleton-chart-card">
                 <div className="skeleton skeleton-line lg" style={{ width: "55%" }} />
                 <div className="skeleton skeleton-line sm" style={{ width: "40%" }} />
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flex: 1 }}>
-                  <div className="skeleton-chart-donut" />
+                <div className="skeleton-chart-area">
+                  {[45, 70, 50, 85, 60, 75, 90].map((h, i) => (
+                    <div key={i} className="skeleton skeleton-bar" style={{ height: `${h}%` }} />
+                  ))}
                 </div>
               </div>
+            </div>
+
+            {/* Skeleton recent transactions table */}
+            <div className="skeleton-table-card">
+              <div className="skeleton skeleton-line lg" style={{ width: "30%", marginBottom: 16 }} />
+              {[1, 2, 3, 4].map((i) => (
+                <div className="skeleton-row" key={i}>
+                  <div className="skeleton skeleton-avatar" />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton skeleton-line md" style={{ width: "40%" }} />
+                    <div className="skeleton skeleton-line sm" style={{ width: "25%" }} />
+                  </div>
+                  <div className="skeleton skeleton-line md" style={{ width: "15%" }} />
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -546,8 +562,9 @@ function App() {
         {isLoaded && !isSignedIn && <HomePage />}
 
         {isLoaded && isSignedIn && (
-          <div className="dashboard">
-            <div className="tab-bar main-nav-tabs">
+          <div className="container">
+            {/* Desktop Dashboard Tab Bar */}
+            <div className="tab-bar desktop-tab-bar">
               <button
                 className={tab === "expense" ? "tab-btn active" : "tab-btn"}
                 onClick={() => setTab("expense")}
@@ -557,7 +574,7 @@ function App() {
                   <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
                   <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
                 </svg>
-                Expense Tracker
+                Expenses
               </button>
               <button
                 className={tab === "analytics" ? "tab-btn active" : "tab-btn"}
@@ -586,92 +603,6 @@ function App() {
               </button>
             </div>
 
-            {/* Left Bottom Floating Action Bubble Menu */}
-            <div className="bubble-nav-wrapper">
-              {isBubbleOpen && (
-                <>
-                  {/* Backdrop overlay to close menu on click outside */}
-                  <div className="bubble-menu-backdrop" onClick={() => setIsBubbleOpen(false)} />
-
-                  {/* Vertical Stack Menu Items (One Below Other) */}
-                  <div className="bubble-menu-stack">
-                    <button
-                      className={`bubble-menu-item ${tab === "splitwise" ? "active" : ""}`}
-                      style={{ animationDelay: "80ms" }}
-                      onClick={() => {
-                        setTab("splitwise");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                      </svg>
-                      <span>Group Splitwise</span>
-                    </button>
-
-                    <button
-                      className={`bubble-menu-item ${tab === "analytics" ? "active" : ""}`}
-                      style={{ animationDelay: "40ms" }}
-                      onClick={() => {
-                        setTab("analytics");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                        <line x1="18" y1="20" x2="18" y2="15" />
-                        <line x1="14" y1="20" x2="14" y2="13" />
-                        <line x1="10" y1="20" x2="10" y2="16" />
-                      </svg>
-                      <span>Analytics Insights</span>
-                    </button>
-
-                    <button
-                      className={`bubble-menu-item ${tab === "expense" ? "active" : ""}`}
-                      style={{ animationDelay: "0ms" }}
-                      onClick={() => {
-                        setTab("expense");
-                        setIsBubbleOpen(false);
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                        <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
-                      </svg>
-                      <span>Expense Tracker</span>
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* Left Bottom Floating Action Bubble Trigger Button */}
-              <button
-                className={`bubble-trigger-btn ${isBubbleOpen ? "open" : ""}`}
-                onClick={() => setIsBubbleOpen(!isBubbleOpen)}
-                title="Category Menu Bubble"
-                aria-label="Toggle navigation categories"
-              >
-                {isBubbleOpen ? (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                ) : (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="14" width="7" height="7" rx="1.5" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                  </svg>
-                )}
-              </button>
-            </div>
-
             {tab === "expense" && <ExpenseTracker />}
             {tab === "analytics" && <Analytics />}
             {tab === "splitwise" && <Splitwise />}
@@ -679,9 +610,196 @@ function App() {
         )}
       </main>
 
-      <footer className="app-footer">
-        Expezplit &copy; {new Date().getFullYear()}
-      </footer>
+      {/* ── Fixed Bottom-Right Floating Action Navigation Menu (FAB) ── */}
+      {isLoaded && (
+        <div className="fab-nav-wrapper">
+          {isBubbleOpen && (
+            <>
+              {/* Dimmed backdrop to close on outside click */}
+              <div className="fab-backdrop" onClick={() => setIsBubbleOpen(false)} />
+
+              {/* Vertical Stack Menu Items (Aligned Bottom-Right) */}
+              <div className="fab-menu-stack">
+                {!isSignedIn ? (
+                  /* Landing Page Navigation Pills */
+                  <>
+                    <a
+                      href="#faq"
+                      className={`fab-pill-item ${activeNav === "faq" ? "active" : ""}`}
+                      style={{ animationDelay: "280ms" }}
+                      onClick={(e) => {
+                        scrollToSection(e, "faq");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <span className="fab-pill-label">FAQ</span>
+                    </a>
+
+                    <a
+                      href="#pricing"
+                      className={`fab-pill-item ${activeNav === "pricing" ? "active" : ""}`}
+                      style={{ animationDelay: "240ms" }}
+                      onClick={(e) => {
+                        scrollToSection(e, "pricing");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <span className="fab-pill-label">Pricing</span>
+                    </a>
+
+                    <a
+                      href="#testimonials"
+                      className={`fab-pill-item ${activeNav === "testimonials" ? "active" : ""}`}
+                      style={{ animationDelay: "200ms" }}
+                      onClick={(e) => {
+                        scrollToSection(e, "testimonials");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <span className="fab-pill-label">User Reviews</span>
+                    </a>
+
+                    <a
+                      href="#matrix"
+                      className={`fab-pill-item ${activeNav === "matrix" ? "active" : ""}`}
+                      style={{ animationDelay: "160ms" }}
+                      onClick={(e) => {
+                        scrollToSection(e, "matrix");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <span className="fab-pill-label">System Matrix</span>
+                    </a>
+
+                    <a
+                      href="#workflow"
+                      className={`fab-pill-item ${activeNav === "workflow" ? "active" : ""}`}
+                      style={{ animationDelay: "120ms" }}
+                      onClick={(e) => {
+                        scrollToSection(e, "workflow");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <span className="fab-pill-label">Workflow</span>
+                    </a>
+
+                    <a
+                      href="#calculator"
+                      className={`fab-pill-item ${activeNav === "calculator" ? "active" : ""}`}
+                      style={{ animationDelay: "80ms" }}
+                      onClick={(e) => {
+                        scrollToSection(e, "calculator");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <span className="fab-pill-label">Live Split Calc</span>
+                    </a>
+
+                    <a
+                      href="#demo"
+                      className={`fab-pill-item ${activeNav === "demo" ? "active" : ""}`}
+                      style={{ animationDelay: "40ms" }}
+                      onClick={(e) => {
+                        scrollToSection(e, "demo");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <span className="fab-pill-label">Simulator</span>
+                    </a>
+
+                    <a
+                      href="#features"
+                      className={`fab-pill-item ${activeNav === "features" ? "active" : ""}`}
+                      style={{ animationDelay: "0ms" }}
+                      onClick={(e) => {
+                        scrollToSection(e, "features");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <span className="fab-pill-label">Features</span>
+                    </a>
+                  </>
+                ) : (
+                  /* Signed-In Dashboard Navigation Pills */
+                  <>
+                    <button
+                      className={`fab-pill-item ${tab === "splitwise" ? "active" : ""}`}
+                      style={{ animationDelay: "80ms" }}
+                      onClick={() => {
+                        setTab("splitwise");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                      <span className="fab-pill-label">Group Splitwise</span>
+                    </button>
+
+                    <button
+                      className={`fab-pill-item ${tab === "analytics" ? "active" : ""}`}
+                      style={{ animationDelay: "40ms" }}
+                      onClick={() => {
+                        setTab("analytics");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                        <line x1="18" y1="20" x2="18" y2="15" />
+                        <line x1="14" y1="20" x2="14" y2="13" />
+                        <line x1="10" y1="20" x2="10" y2="16" />
+                      </svg>
+                      <span className="fab-pill-label">Analytics Insights</span>
+                    </button>
+
+                    <button
+                      className={`fab-pill-item ${tab === "expense" ? "active" : ""}`}
+                      style={{ animationDelay: "0ms" }}
+                      onClick={() => {
+                        setTab("expense");
+                        setIsBubbleOpen(false);
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                        <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
+                      </svg>
+                      <span className="fab-pill-label">Expense Tracker</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Bottom-Right Floating Trigger Button */}
+          <button
+            className={`fab-trigger-btn ${isBubbleOpen ? "open" : ""}`}
+            onClick={() => setIsBubbleOpen(!isBubbleOpen)}
+            title="Navigation Menu"
+            aria-label="Toggle navigation menu"
+          >
+            {isBubbleOpen ? (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="18" x2="20" y2="18" />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
