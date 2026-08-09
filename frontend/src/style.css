@@ -685,36 +685,38 @@ p {
   }
 
   .navbar-wrapper.is-scrolled {
-    top: 10px;
-    padding: 0 14px;
+    top: 12px;
+    padding: 0 16px;
   }
 
   .navbar-island {
-    padding: 0 20px;
-    height: 72px;
+    padding: 0 24px;
+    height: 84px;
     border-radius: 0;
     justify-content: space-between;
-    gap: 10px;
+    gap: 14px;
   }
 
   .navbar-island.is-scrolled {
-    padding: 6px 16px;
-    height: 58px;
+    padding: 8px 20px;
+    height: 68px;
     border-radius: 9999px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 28px rgba(255, 230, 0, 0.22);
   }
 
   .logo-mark {
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
   }
 
   .logo-text {
-    font-size: 19px;
-    font-weight: 800;
+    font-size: 21px;
+    font-weight: 900;
+    letter-spacing: -0.01em;
   }
 
   .navbar-actions {
-    gap: 12px;
+    gap: 14px;
   }
 
   .btn-login-pill {
@@ -726,15 +728,15 @@ p {
   }
 
   .btn-cta-inner {
-    padding: 9px 20px;
-    font-size: 14.5px;
-    font-weight: 800;
-    gap: 6px;
+    padding: 10px 24px;
+    font-size: 15.5px;
+    font-weight: 900;
+    gap: 7px;
   }
 
   .btn-cta-inner .cta-arrow {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
   }
 
   .theme-toggle {
@@ -748,70 +750,70 @@ p {
   }
 
   .theme-toggle-inner {
-    width: 22px;
-    height: 22px;
+    width: 25px;
+    height: 25px;
   }
 
   .theme-toggle .sun-icon,
   .theme-toggle .moon-icon {
-    width: 22px;
-    height: 22px;
+    width: 25px;
+    height: 25px;
   }
 
   .fab-nav-wrapper {
-    bottom: 20px;
-    right: 20px;
+    bottom: 22px;
+    right: 22px;
   }
 
   .fab-menu-stack {
-    bottom: 88px;
-    right: 20px;
-    gap: 10px;
+    bottom: 94px;
+    right: 22px;
+    gap: 12px;
   }
 
   .fab-pill-item {
-    padding: 12px 20px;
-    font-size: 14.5px;
+    padding: 14px 22px;
+    font-size: 15px;
   }
 
   .fab-trigger-btn {
-    width: 56px;
-    height: 56px;
+    width: 60px;
+    height: 60px;
   }
 }
 
 @media (max-width: 480px) {
   .navbar-wrapper.is-scrolled {
-    top: 8px;
-    padding: 0 10px;
+    top: 10px;
+    padding: 0 12px;
   }
 
   .navbar-island {
-    padding: 0 14px;
-    height: 68px;
-    gap: 6px;
+    padding: 0 18px;
+    height: 78px;
+    gap: 10px;
     border: none !important;
   }
 
   .navbar-island.is-scrolled {
-    padding: 5px 12px;
-    height: 54px;
+    padding: 6px 16px;
+    height: 62px;
     border-radius: 9999px;
-    border: 1.5px solid rgba(255, 230, 0, 0.38) !important;
+    border: 2px solid rgba(255, 230, 0, 0.42) !important;
   }
 
   .logo-mark {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
   }
 
   .logo-text {
-    font-size: 17.5px;
-    font-weight: 800;
+    font-size: 19.5px;
+    font-weight: 900;
   }
 
   .navbar-actions {
-    gap: 10px;
+    gap: 12px;
   }
 
   .btn-login-pill {
@@ -819,22 +821,22 @@ p {
   }
 
   .btn-cta-inner {
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 800;
-    gap: 5px;
+    padding: 9px 20px;
+    font-size: 14.5px;
+    font-weight: 850;
+    gap: 6px;
   }
 
   .btn-cta-inner .cta-arrow {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     display: inline-block;
   }
 
   .theme-toggle {
     width: auto;
     height: auto;
-    padding: 4px;
+    padding: 5px;
     background: transparent !important;
     border: none !important;
     outline: none !important;
@@ -842,25 +844,25 @@ p {
   }
 
   .theme-toggle-inner {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
 
   .theme-toggle .sun-icon,
   .theme-toggle .moon-icon {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
 
   .fab-nav-wrapper {
-    bottom: 16px;
-    right: 16px;
+    bottom: 18px;
+    right: 18px;
   }
 
   .fab-menu-stack {
-    bottom: 80px;
-    right: 16px;
-    max-height: calc(100vh - 90px);
+    bottom: 86px;
+    right: 18px;
+    max-height: calc(100vh - 95px);
     overflow-y: auto;
   }
 }
@@ -10052,7 +10054,7 @@ p {
   /* Hero Section */
   .lp-hero-fullscreen {
     min-height: auto;
-    padding: 110px 16px 40px;
+    padding: 125px 16px 40px;
   }
 
   .lp-hero-live-badge {
@@ -10366,7 +10368,7 @@ p {
 
 @media (max-width: 480px) {
   .lp-hero-fullscreen {
-    padding: 95px 12px 30px;
+    padding: 115px 12px 30px;
   }
 
   .lp-hero-title {
