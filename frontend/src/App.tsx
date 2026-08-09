@@ -596,6 +596,51 @@ function App() {
 
         {isLoaded && isSignedIn && (
           <div className="dashboard-wrap">
+            <nav className="mobile-bottom-nav" aria-label="Dashboard navigation">
+              <button
+                type="button"
+                className={`mobile-nav-item ${tab === "expense" ? "active" : ""}`}
+                onClick={() => setTab("expense")}
+                aria-current={tab === "expense" ? "page" : undefined}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                  <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
+                </svg>
+                <span>Expenses</span>
+              </button>
+              <button
+                type="button"
+                className={`mobile-nav-item ${tab === "analytics" ? "active" : ""}`}
+                onClick={() => setTab("analytics")}
+                aria-current={tab === "analytics" ? "page" : undefined}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                  <line x1="18" y1="20" x2="18" y2="15" />
+                  <line x1="14" y1="20" x2="14" y2="13" />
+                  <line x1="10" y1="20" x2="10" y2="16" />
+                </svg>
+                <span>Analytics</span>
+              </button>
+              <button
+                type="button"
+                className={`mobile-nav-item ${tab === "splitwise" ? "active" : ""}`}
+                onClick={() => setTab("splitwise")}
+                aria-current={tab === "splitwise" ? "page" : undefined}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                <span>Splitwise</span>
+              </button>
+            </nav>
+
             <div className="dashboard">
               <div className="tab-bar main-nav-tabs">
                 <button
@@ -776,52 +821,6 @@ function App() {
         </div>
       )}
 
-      {isLoaded && isSignedIn && (
-        <nav className="mobile-bottom-nav" aria-label="Dashboard navigation">
-          <button
-            type="button"
-            className={`mobile-nav-item ${tab === "expense" ? "active" : ""}`}
-            onClick={() => setTab("expense")}
-            aria-current={tab === "expense" ? "page" : undefined}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-              <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z" />
-            </svg>
-            <span>Expenses</span>
-          </button>
-          <button
-            type="button"
-            className={`mobile-nav-item ${tab === "analytics" ? "active" : ""}`}
-            onClick={() => setTab("analytics")}
-            aria-current={tab === "analytics" ? "page" : undefined}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-              <line x1="18" y1="20" x2="18" y2="15" />
-              <line x1="14" y1="20" x2="14" y2="13" />
-              <line x1="10" y1="20" x2="10" y2="16" />
-            </svg>
-            <span>Analytics</span>
-          </button>
-          <button
-            type="button"
-            className={`mobile-nav-item ${tab === "splitwise" ? "active" : ""}`}
-            onClick={() => setTab("splitwise")}
-            aria-current={tab === "splitwise" ? "page" : undefined}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <span>Splitwise</span>
-          </button>
-        </nav>
-      )}
     </div>
   );
 }
