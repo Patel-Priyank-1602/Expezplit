@@ -125,7 +125,7 @@ function App() {
       if (!isSignedIn) {
         const sectionIds = ["demo", "features", "calculator", "workflow", "matrix", "testimonials", "pricing", "faq"];
         const scrollPosition = scrollY + 120;
-        
+
         for (let i = sectionIds.length - 1; i >= 0; i--) {
           const section = document.getElementById(sectionIds[i]);
           if (section) {
