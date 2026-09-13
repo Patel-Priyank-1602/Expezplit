@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: expezplit-backend
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: EMBEDDED_WORKER
+        value: "true"
+      - key: REDIS_URL
+        sync: false
+      - key: EMAIL
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: RATE_LIMIT_POINTS
+        value: "50"
+      - key: RATE_LIMIT_DURATION
+        value: "60"
+      - key: EXCHANGE_RATE_API_KEY
+        sync: false

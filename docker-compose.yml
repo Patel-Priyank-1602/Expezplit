@@ -1,0 +1,161 @@
+# Expezplit — Docker Compose (§3.3)
+# Local dev parity with production topology.
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose up -d --build      # Rebuild and start
+#   docker-compose logs -f worker     # Tail worker logs
+#   docker-compose ps                 # Check service status
+#   docker-compose down               # Stop all services
+
+services:
+  # ── Infrastructure ─────────────────────────────────────────────────
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6399:6379"  # Host port 6399 to avoid conflict with local Redis
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Kafka — optional, uncomment when you need multi-consumer event streaming
+  # kafka:
+  #   image: bitnami/kafka:3.7
+  #   environment:
+  #     - KAFKA_CFG_NODE_ID=0
+  #     - KAFKA_CFG_PROCESS_ROLES=controller,broker
+  #     - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+  #     - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+  #     - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+  #     - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+  #   ports:
+  #     - "9092:9092"
+  #   volumes:
+  #     - kafka-data:/bitnami/kafka
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #   restart: unless-stopped
+
+  # ── Application Services ───────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: api-gateway/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - PORT=4000
+      - REDIS_URL=redis://redis:6379
+      # - KAFKA_BROKERS=kafka:9092    # Uncomment when Kafka is enabled
+      - NODE_ENV=production
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+
+  sse-gateway:
+    build:
+      context: ./backend
+      dockerfile: sse-gateway/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - SSE_PORT=4001
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    ports:
+      - "4001:4001"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: worker/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DASHBOARD_PORT=9100
+      - NODE_ENV=production
+    ports:
+      - "9100:9100"
+    deploy:
+      replicas: 1
+    restart: unless-stopped
+
+  email-service:
+    build:
+      context: ./backend
+      dockerfile: email-service/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    ports:
+      - "3002:3001"  # Host port 3002 to avoid conflict
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api-gateway
+      - sse-gateway
+    restart: unless-stopped
+
+  # ── Monitoring ─────────────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9099:9090"  # Host port 9099 to avoid conflict
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3030:3000"  # Host port 3030 to avoid conflict
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=expezplit
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+  # kafka-data:    # Uncomment when Kafka is enabled

@@ -1,12 +1,14 @@
 {
   "name": "expezplit-backend",
   "version": "1.0.0",
-  "description": "Email notification server for Expezplit",
+  "description": "Expezplit backend microservices & gateway",
   "type": "module",
-  "main": "emailServer.mjs",
+  "main": "api-gateway/server.js",
   "scripts": {
-    "start": "node emailServer.mjs",
-    "dev": "node --watch emailServer.mjs"
+    "postinstall": "cd shared && npm install && cd ../api-gateway && npm install && cd ../worker && npm install && cd ../sse-gateway && npm install",
+    "start": "node api-gateway/server.js",
+    "dev": "node --watch api-gateway/server.js",
+    "legacy": "node emailServer.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",

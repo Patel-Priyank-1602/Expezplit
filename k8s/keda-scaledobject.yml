@@ -1,0 +1,32 @@
+# KEDA ScaledObject — Queue-depth-based autoscaling for workers (§4.2)
+#
+# Requires KEDA to be installed in the cluster:
+#   kubectl apply -f https://github.com/kedacore/keda/releases/latest/download/keda-2.x.yaml
+#
+# This scales workers based on how many jobs are waiting in the
+# email-queue, which is more appropriate than CPU-based scaling
+# for I/O-bound SMTP jobs.
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-scaledobject
+  namespace: expezplit-prod
+spec:
+  scaleTargetRef:
+    name: worker
+  minReplicaCount: 1
+  maxReplicaCount: 8
+  cooldownPeriod: 300
+  pollingInterval: 15
+  triggers:
+    - type: redis
+      metadata:
+        address: redis.expezplit-prod.svc.cluster.local:6379
+        listName: "bull:email-queue:wait"
+        listLength: "10"   # Add a pod for every 10 queued jobs
+    - type: redis
+      metadata:
+        address: redis.expezplit-prod.svc.cluster.local:6379
+        listName: "bull:notification-queue:wait"
+        listLength: "20"   # Notifications are faster, higher threshold

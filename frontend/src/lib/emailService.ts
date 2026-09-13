@@ -2,7 +2,10 @@
  * Email Service - Frontend utility to send expense notifications
  */
 
-const EMAIL_API_URL = import.meta.env.VITE_EMAIL_API_URL || "http://localhost:3001";
+// API Gateway URL — in Docker/K8s this is handled by nginx reverse proxy (/api/*)
+// In local dev, the Vite proxy forwards /api/* to localhost:4000
+// Falls back to the original email server URL for backward compatibility
+const EMAIL_API_URL = import.meta.env.VITE_EMAIL_API_URL || "http://localhost:4000";
 
 export interface EmailParticipant {
   name: string;

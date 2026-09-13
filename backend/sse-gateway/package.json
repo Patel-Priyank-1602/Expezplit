@@ -1,0 +1,19 @@
+{
+  "name": "expezplit-sse-gateway",
+  "version": "1.0.0",
+  "description": "Expezplit SSE Gateway — Server-Sent Events for real-time notifications via Redis pub/sub",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ioredis": "^5.4.1",
+    "prom-client": "^15.1.3",
+    "@sentry/node": "^8.37.0"
+  }
+}

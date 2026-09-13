@@ -1,4 +1,22 @@
 /**
+ * ⚠️  DEPRECATED — This file is preserved for reference only.
+ *
+ * Email sending has been migrated to the new microservices architecture:
+ *   - API Gateway:    backend/api-gateway/server.js   (accepts /api/send-email, enqueues BullMQ jobs)
+ *   - Email Service:  backend/email-service/server.js  (backward-compatible bridge)
+ *   - Worker:         backend/worker/handlers/email.js  (actual SMTP sending with retries)
+ *
+ * To run the new stack:
+ *   docker-compose up -d
+ *
+ * Or run individual services:
+ *   cd backend/api-gateway && npm start
+ *   cd backend/worker && npm start
+ *
+ * See EXPEZPLIT_SCALING_ARCHITECTURE.md for the full architecture.
+ */
+
+/**
  * Simple Express server for sending email notifications
  * 
  * Setup:
