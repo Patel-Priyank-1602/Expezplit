@@ -98,6 +98,19 @@ type Group = {
   owner_user_id: string;
 };
 
+type PendingExpenseConfirmation = {
+  description: string;
+  amountDisplay: number;
+  amountBase: number;
+  paidByMember: Member;
+  splitType: "equal" | "custom";
+  splits: Array<{
+    member: Member;
+    amountDisplay: number;
+    amountBase: number;
+  }>;
+};
+
 /* ─── Group Theme Color Presets ─── */
 export const GROUP_COLOR_PRESETS = [
   { id: "coral", name: "Coral Sunset", value: "linear-gradient(135deg, #FF6B6B, #C0392B)", solid: "#FF6B6B" },
@@ -184,6 +197,10 @@ export function Splitwise() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
   const [settleState, setSettleState] = useState<Record<string, { toId: string; amount: string }>>({});
+  const [pendingExpenseConfirmation, setPendingExpenseConfirmation] = useState<PendingExpenseConfirmation | null>(null);
+  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+  const [expenseFormError, setExpenseFormError] = useState<string | null>(null);
+  const [avatarErrors, setAvatarErrors] = useState<Record<string, boolean>>({});
   const [currencyCode, setCurrencyCode] = useState<CurrencyCode>(() => {
     const savedCode = localStorage.getItem("app_currency_code")?.toUpperCase();
     if (savedCode && /^[A-Z]{3}$/.test(savedCode)) return savedCode;
@@ -902,117 +919,219 @@ export function Splitwise() {
     setSelectedIds((p) => { const n = new Set(p); n.has(mid) ? n.delete(mid) : n.add(mid); return n; });
   };
 
-  /* ─── Add expense ─── */
-  const addExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentGroup) return;
-    const valDisplay = parseFloat(expAmount);
-    if (!expDesc.trim() || isNaN(valDisplay) || valDisplay <= 0) return;
-    const valBase = convertToBase(valDisplay);
+  // Close confirmation modal on Escape key
+  useEffect(() => {
+    if (!pendingExpenseConfirmation) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isSubmittingExpense) {
+        setPendingExpenseConfirmation(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [pendingExpenseConfirmation, isSubmittingExpense]);
 
-    let splits: SplitDetail[];
-    if (splitType === "equal") {
-      const sel = currentGroup.members.filter((m) => selectedIds.has(m.id));
-      if (!sel.length) return;
-      const per = valBase / sel.length;
-      splits = sel.map((m) => ({ member_id: m.id, amount: per }));
-    } else {
-      splits = currentGroup.members
-        .filter((m) => selectedIds.has(m.id))
-        .map((m) => ({ member_id: m.id, amount: convertToBase(parseFloat(customAmounts[m.id] || "0")) }))
-        .filter((s) => s.amount > 0);
-      if (!splits.length) return;
+  /* ─── Initiate Add expense (opens confirmation popup first; DOES NOT save to DB/store) ─── */
+  const handleInitiateAddExpense = (e: React.FormEvent) => {
+    e.preventDefault();
+    setExpenseFormError(null);
+    if (!currentGroup) return;
+
+    const trimmedDesc = expDesc.trim();
+    if (!trimmedDesc) {
+      setExpenseFormError("Please enter what the expense was for (e.g., Hotel, Taxi, Dinner).");
+      return;
     }
 
-    // Insert expense
-    const { data: exp, error: eErr } = await supabase
-      .from("group_expenses")
-      .insert({
-        group_id: currentGroup.id,
-        description: expDesc.trim(),
-        amount: valBase,
-        paid_by_id: paidById || currentGroup.members[0]?.id || "",
-        split_type: splitType,
-      })
-      .select()
-      .single();
+    const valDisplay = parseFloat(expAmount);
+    if (isNaN(valDisplay) || valDisplay <= 0) {
+      setExpenseFormError("Please enter a valid expense amount greater than 0.");
+      return;
+    }
 
-    if (eErr || !exp) { console.error("Error adding expense:", eErr?.message); return; }
-
-    // Insert splits
-    const splitInserts = splits.map((s) => ({
-      expense_id: exp.id,
-      member_id: s.member_id,
-      amount: s.amount,
-    }));
-
-    const { data: splitData, error: sErr } = await supabase
-      .from("group_expense_splits")
-      .insert(splitInserts)
-      .select();
-
-    if (sErr) { console.error("Error adding splits:", sErr.message); return; }
-
-    const newExp: GroupExpense = {
-      id: exp.id,
-      description: exp.description,
-      amount: Number(exp.amount),
-      paid_by_id: exp.paid_by_id,
-      split_type: exp.split_type,
-      created_at: exp.created_at,
-      splits: (splitData ?? []).map((s: any) => ({ id: s.id, member_id: s.member_id, amount: Number(s.amount) })),
-    };
-
-    const updated = { ...currentGroup, expenses: [...currentGroup.expenses, newExp] };
-    setGroups((p) => p.map((g) => (g.id === updated.id ? updated : g)));
-
-    // Create real-time notifications for all involved members
     const payer = currentGroup.members.find((m) => m.id === (paidById || currentGroup.members[0]?.id));
-    const payerName = payer?.name ?? "Unknown";
-    const payerEmail = payer?.email ?? "";
-    const payerUpiId = payer?.upi_id ?? null;
+    if (!payer) {
+      setExpenseFormError("Please select who paid for this expense.");
+      return;
+    }
 
-    createExpenseNotifications({
-      expenseId: exp.id,
-      groupId: currentGroup.id,
-      description: expDesc.trim(),
-      amount: valBase,
-      paidByName: payerName,
-      paidByEmail: payerEmail,
-      splits: (splitData ?? []).map((s: any) => {
-        const member = currentGroup.members.find((m) => m.id === s.member_id);
-        return {
-          memberName: member?.name ?? "Unknown",
-          memberEmail: member?.email ?? "",
-          amount: Number(s.amount),
-        };
-      }),
-    });
+    const valBase = convertToBase(valDisplay);
 
-    // Send email notifications to participants (async, non-blocking)
-    sendExpenseEmailNotifications({
-      participants: (splitData ?? []).map((s: any) => {
-        const member = currentGroup.members.find((m) => m.id === s.member_id);
-        return {
-          name: member?.name ?? "Unknown",
-          email: member?.email ?? "",
-          amount: convertFromBase(Number(s.amount)),
-        };
-      }),
-      groupName: currentGroup.name,
-      payerName,
-      payerEmail,
-      payerUpiId,
-      expenseDescription: expDesc.trim(),
-    }).then((result) => {
-      if (result.success) {
-        console.log(`Email notifications sent: ${result.message}`);
-      } else {
-        console.warn("Email notifications failed:", result.error);
+    let preparedSplits: Array<{
+      member: Member;
+      amountDisplay: number;
+      amountBase: number;
+    }> = [];
+
+    if (splitType === "equal") {
+      const selectedMembers = currentGroup.members.filter((m) => selectedIds.has(m.id));
+      if (!selectedMembers.length) {
+        setExpenseFormError("Please select at least one person to split the expense with.");
+        return;
       }
-    });
+      const perDisplay = valDisplay / selectedMembers.length;
+      const perBase = valBase / selectedMembers.length;
 
-    setExpDesc(""); setExpAmount(""); setCustomAmounts({});
+      preparedSplits = selectedMembers.map((m) => ({
+        member: m,
+        amountDisplay: perDisplay,
+        amountBase: perBase,
+      }));
+    } else {
+      const customMembers = currentGroup.members
+        .map((m) => {
+          const amt = parseFloat(customAmounts[m.id] || "0");
+          return {
+            member: m,
+            amountDisplay: isNaN(amt) ? 0 : amt,
+            amountBase: convertToBase(isNaN(amt) ? 0 : amt),
+          };
+        })
+        .filter((s) => s.amountDisplay > 0);
+
+      if (!customMembers.length) {
+        setExpenseFormError("Please enter custom split amounts for at least one person.");
+        return;
+      }
+
+      preparedSplits = customMembers;
+    }
+
+    // Opens confirmation popup — NOTHING is inserted in Supabase DB or store yet!
+    setPendingExpenseConfirmation({
+      description: trimmedDesc,
+      amountDisplay: valDisplay,
+      amountBase: valBase,
+      paidByMember: payer,
+      splitType,
+      splits: preparedSplits,
+    });
+  };
+
+  /* ─── Cancel confirmation popup (does not modify DB or store) ─── */
+  const handleCancelExpense = () => {
+    if (isSubmittingExpense) return;
+    setPendingExpenseConfirmation(null);
+  };
+
+  /* ─── Confirmed: Save to DB & Store ─── */
+  const handleConfirmAddExpense = async () => {
+    if (!currentGroup || !pendingExpenseConfirmation || isSubmittingExpense) return;
+
+    try {
+      setIsSubmittingExpense(true);
+
+      const { description, amountBase, paidByMember, splitType: confirmedSplitType, splits } = pendingExpenseConfirmation;
+
+      // 1. Insert expense in database
+      const { data: exp, error: eErr } = await supabase
+        .from("group_expenses")
+        .insert({
+          group_id: currentGroup.id,
+          description,
+          amount: amountBase,
+          paid_by_id: paidByMember.id,
+          split_type: confirmedSplitType,
+        })
+        .select()
+        .single();
+
+      if (eErr || !exp) {
+        console.error("Error adding expense:", eErr?.message);
+        window.alert("Failed to add expense. Please try again.");
+        setIsSubmittingExpense(false);
+        return;
+      }
+
+      // 2. Insert splits in database
+      const splitInserts = splits.map((s) => ({
+        expense_id: exp.id,
+        member_id: s.member.id,
+        amount: s.amountBase,
+      }));
+
+      const { data: splitData, error: sErr } = await supabase
+        .from("group_expense_splits")
+        .insert(splitInserts)
+        .select();
+
+      if (sErr) {
+        console.error("Error adding splits:", sErr.message);
+        window.alert("Failed to save expense splits. Please try again.");
+        setIsSubmittingExpense(false);
+        return;
+      }
+
+      // 3. Update local state / store
+      const newExp: GroupExpense = {
+        id: exp.id,
+        description: exp.description,
+        amount: Number(exp.amount),
+        paid_by_id: exp.paid_by_id,
+        split_type: exp.split_type,
+        created_at: exp.created_at,
+        splits: (splitData ?? []).map((s: any) => ({ id: s.id, member_id: s.member_id, amount: Number(s.amount) })),
+      };
+
+      const updated = { ...currentGroup, expenses: [...currentGroup.expenses, newExp] };
+      setGroups((p) => p.map((g) => (g.id === updated.id ? updated : g)));
+
+      // 4. Notifications & Emails
+      const payerName = paidByMember.name ?? "Unknown";
+      const payerEmail = paidByMember.email ?? "";
+      const payerUpiId = paidByMember.upi_id ?? null;
+
+      createExpenseNotifications({
+        expenseId: exp.id,
+        groupId: currentGroup.id,
+        description,
+        amount: amountBase,
+        paidByName: payerName,
+        paidByEmail: payerEmail,
+        splits: (splitData ?? []).map((s: any) => {
+          const member = currentGroup.members.find((m) => m.id === s.member_id);
+          return {
+            memberName: member?.name ?? "Unknown",
+            memberEmail: member?.email ?? "",
+            amount: Number(s.amount),
+          };
+        }),
+      });
+
+      sendExpenseEmailNotifications({
+        participants: (splitData ?? []).map((s: any) => {
+          const member = currentGroup.members.find((m) => m.id === s.member_id);
+          return {
+            name: member?.name ?? "Unknown",
+            email: member?.email ?? "",
+            amount: convertFromBase(Number(s.amount)),
+          };
+        }),
+        groupName: currentGroup.name,
+        payerName,
+        payerEmail,
+        payerUpiId,
+        expenseDescription: description,
+      }).then((result) => {
+        if (result.success) {
+          console.log(`Email notifications sent: ${result.message}`);
+        } else {
+          console.warn("Email notifications failed:", result.error);
+        }
+      });
+
+      // 5. Clear form & close popup
+      setExpDesc("");
+      setExpAmount("");
+      setCustomAmounts({});
+      setExpenseFormError(null);
+      setPendingExpenseConfirmation(null);
+    } catch (err) {
+      console.error("Error saving expense:", err);
+      window.alert("An unexpected error occurred while saving the expense.");
+    } finally {
+      setIsSubmittingExpense(false);
+    }
   };
 
   /* ─── Delete expense ─── */
@@ -2245,15 +2364,34 @@ export function Splitwise() {
                   <div className="card-sub">Showing top 3 latest transactions</div>
                 </div>
               </div>
-              <form onSubmit={addExpense}>
+              <form onSubmit={handleInitiateAddExpense}>
                 <div className="form-row" style={{ marginBottom: 10 }}>
                   <div className="field">
                     <label className="field-label">What for?</label>
-                    <input className="field-input" value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="Hotel, Taxi, Dinner..." />
+                    <input
+                      className="field-input"
+                      value={expDesc}
+                      onChange={(e) => {
+                        setExpDesc(e.target.value);
+                        if (expenseFormError) setExpenseFormError(null);
+                      }}
+                      placeholder="Hotel, Taxi, Dinner..."
+                    />
                   </div>
                   <div className="field">
                     <label className="field-label">Amount ({activeCurrencyCode})</label>
-                    <input className="field-input" type="number" min="0" step="0.01" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="0.00" />
+                    <input
+                      className="field-input"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={expAmount}
+                      onChange={(e) => {
+                        setExpAmount(e.target.value);
+                        if (expenseFormError) setExpenseFormError(null);
+                      }}
+                      placeholder="0.00"
+                    />
                   </div>
                 </div>
                 <div className="form-row" style={{ marginBottom: 10 }}>
@@ -2281,6 +2419,7 @@ export function Splitwise() {
                               onClick={() => {
                                 setPaidById(m.id);
                                 setIsPaidByMenuOpen(false);
+                                if (expenseFormError) setExpenseFormError(null);
                               }}
                             >
                               {m.name}{isMe(m) ? " (You)" : ""}
@@ -2309,6 +2448,7 @@ export function Splitwise() {
                             onClick={() => {
                               setSplitType("equal");
                               setIsSplitTypeMenuOpen(false);
+                              if (expenseFormError) setExpenseFormError(null);
                             }}
                           >
                             Equal split
@@ -2319,6 +2459,7 @@ export function Splitwise() {
                             onClick={() => {
                               setSplitType("custom");
                               setIsSplitTypeMenuOpen(false);
+                              if (expenseFormError) setExpenseFormError(null);
                             }}
                           >
                             Custom amounts
@@ -2335,7 +2476,15 @@ export function Splitwise() {
                     {currentGroup.members.map((m) => (
                       <label key={m.id} className="split-check">
                         <div className="checkbox-wrapper">
-                          <input type="checkbox" className="custom-checkbox" checked={selectedIds.has(m.id)} onChange={() => toggle(m.id)} />
+                          <input
+                            type="checkbox"
+                            className="custom-checkbox"
+                            checked={selectedIds.has(m.id)}
+                            onChange={() => {
+                              toggle(m.id);
+                              if (expenseFormError) setExpenseFormError(null);
+                            }}
+                          />
                           <div className="checkbox-box">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                           </div>
@@ -2352,9 +2501,30 @@ export function Splitwise() {
                     {currentGroup.members.map((m) => (
                       <div key={m.id} className="custom-row">
                         <div className="split-check-label">{m.name}{isMe(m) ? " (You)" : ""}</div>
-                        <input type="number" min="0" step="0.01" placeholder="0.00" value={customAmounts[m.id] || ""} onChange={(e) => setCustomAmounts((p) => ({ ...p, [m.id]: e.target.value }))} />
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={customAmounts[m.id] || ""}
+                          onChange={(e) => {
+                            setCustomAmounts((p) => ({ ...p, [m.id]: e.target.value }));
+                            if (expenseFormError) setExpenseFormError(null);
+                          }}
+                        />
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {expenseFormError && (
+                  <div className="expense-form-error" role="alert">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span>{expenseFormError}</span>
                   </div>
                 )}
 
@@ -2737,6 +2907,158 @@ export function Splitwise() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Expense Confirmation Popup Modal (Minimal & Professional) */}
+      {pendingExpenseConfirmation && (
+        <div className="modal-backdrop" onClick={handleCancelExpense}>
+          <div
+            className="modal-card expense-confirm-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-expense-title"
+          >
+            {/* Header */}
+            <div className="expense-confirm-header">
+              <div>
+                <h3 id="confirm-expense-title" className="expense-confirm-title">Confirm expense</h3>
+                <p className="expense-confirm-subtitle">Review split details before adding</p>
+              </div>
+              <button
+                type="button"
+                className="expense-confirm-close"
+                onClick={handleCancelExpense}
+                disabled={isSubmittingExpense}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="expense-confirm-body">
+              {/* Hero Amount & Description */}
+              <div className="expense-confirm-hero">
+                <div className="expense-confirm-hero-amount">
+                  <span className="expense-confirm-hero-symbol">{currencySymbol}</span>
+                  <span className="expense-confirm-hero-val">
+                    {pendingExpenseConfirmation.amountDisplay.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+
+                <div className="expense-confirm-hero-desc">
+                  {pendingExpenseConfirmation.description}
+                </div>
+
+                <div className="expense-confirm-meta-row">
+                  <span>
+                    Paid by <strong className="expense-confirm-bold-name">{pendingExpenseConfirmation.paidByMember.name}</strong>
+                    {isMe(pendingExpenseConfirmation.paidByMember) ? " (You)" : ""}
+                  </span>
+                  <span className="expense-confirm-meta-dot">&bull;</span>
+                  <span>
+                    {pendingExpenseConfirmation.splitType === "equal" ? "Equal split" : "Custom split"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Custom Split Mismatch Warning (if any) */}
+              {pendingExpenseConfirmation.splitType === "custom" && (() => {
+                const sumCustom = pendingExpenseConfirmation.splits.reduce((acc, s) => acc + s.amountDisplay, 0);
+                const diff = Math.abs(sumCustom - pendingExpenseConfirmation.amountDisplay);
+                if (diff > 0.01) {
+                  return (
+                    <div className="expense-confirm-alert warning">
+                      <span>⚠️ Custom split sum ({currencySymbol}{sumCustom.toFixed(2)}) differs from total expense ({currencySymbol}{pendingExpenseConfirmation.amountDisplay.toFixed(2)}).</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Split Breakdown */}
+              <div className="expense-confirm-splits-section">
+                <div className="expense-confirm-splits-header">
+                  <span className="expense-confirm-splits-title">
+                    Split with ({pendingExpenseConfirmation.splits.length})
+                  </span>
+                  {pendingExpenseConfirmation.splitType === "equal" && (
+                    <span className="expense-confirm-splits-subtext">
+                      {currencySymbol}{pendingExpenseConfirmation.splits[0]?.amountDisplay.toFixed(2)} each
+                    </span>
+                  )}
+                </div>
+
+                <div className="expense-confirm-splits-list">
+                  {pendingExpenseConfirmation.splits.map(({ member, amountDisplay }) => {
+                    const isPayer = member.id === pendingExpenseConfirmation.paidByMember.id;
+                    const isCurrentUser = isMe(member);
+                    const percent = pendingExpenseConfirmation.amountDisplay > 0
+                      ? ((amountDisplay / pendingExpenseConfirmation.amountDisplay) * 100).toFixed(0)
+                      : "0";
+
+                    return (
+                      <div key={member.id} className="expense-confirm-split-row">
+                        <div className="expense-confirm-member-info">
+                          <div className="expense-confirm-member-avatar">
+                            {getMemberAvatarUrl(member) && !avatarErrors[member.id] ? (
+                              <img
+                                src={getMemberAvatarUrl(member)!}
+                                alt=""
+                                onError={() => setAvatarErrors((p) => ({ ...p, [member.id]: true }))}
+                              />
+                            ) : (
+                              <span>{initial(member.name)}</span>
+                            )}
+                          </div>
+                          <div className="expense-confirm-member-details">
+                            <div className="expense-confirm-member-name">
+                              <span>{member.name}</span>
+                              {isCurrentUser && <span className="expense-confirm-badge-subtle you">You</span>}
+                              {isPayer && <span className="expense-confirm-badge-subtle payer">Payer</span>}
+                            </div>
+                            <div className="expense-confirm-member-email">{member.email}</div>
+                          </div>
+                        </div>
+
+                        <div className="expense-confirm-split-amount-wrap">
+                          <div className="expense-confirm-split-amount">
+                            {currencySymbol}{amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          <div className="expense-confirm-split-percent">{percent}%</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="expense-confirm-actions">
+              <button
+                type="button"
+                className="btn btn-secondary expense-confirm-btn"
+                onClick={handleCancelExpense}
+                disabled={isSubmittingExpense}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary expense-confirm-btn"
+                onClick={handleConfirmAddExpense}
+                disabled={isSubmittingExpense}
+              >
+                {isSubmittingExpense ? "Adding..." : "Confirm & Add"}
+              </button>
+            </div>
           </div>
         </div>
       )}
